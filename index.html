@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Agenda de Tenis</title>
+<meta name="theme-color" content="#1f5b86">
+<meta name="description" content="Agenda, cobros y finanzas para profesores de tenis">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="config.js"></script>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: banda de cancha arriba con pestañas fijas; contenido en una columna angosta, pensada para el celular del profe */
+:root{
+  --bg:#f3f6f8; --surface:#ffffff; --ink:#13202b; --muted:#5b6977; --line:#d8e0e7;
+  --court:#1f5b86; --court-2:#174669; --chalk:#ffffff; --ball:#d5e63c; --ball-ink:#1d2a06;
+  --ok:#2e7a4d; --ok-bg:#e3f2e9; --warn:#9a6411; --warn-bg:#fbf0dc; --bad:#b3392b; --bad-bg:#fbe5e2;
+  --info-bg:#e6eef5;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e161e; --surface:#16212b; --ink:#e6ecf1; --muted:#93a2b0; --line:#273541;
+  --court:#2a6d9e; --court-2:#1b4d73; --chalk:#f2f6f9; --ball:#d5e63c; --ball-ink:#1d2a06;
+  --ok:#6cc792; --ok-bg:#163527; --warn:#e6b45e; --warn-bg:#3a2c12; --bad:#f08a7c; --bad-bg:#41201c;
+  --info-bg:#1b2c3b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e161e; --surface:#16212b; --ink:#e6ecf1; --muted:#93a2b0; --line:#273541;
+  --court:#2a6d9e; --court-2:#1b4d73; --chalk:#f2f6f9; --ball:#d5e63c; --ball-ink:#1d2a06;
+  --ok:#6cc792; --ok-bg:#163527; --warn:#e6b45e; --warn-bg:#3a2c12; --bad:#f08a7c; --bad-bg:#41201c;
+  --info-bg:#1b2c3b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--court)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* Cabecera tipo cancha */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--court);color:var(--chalk);
+  border-bottom:3px solid var(--chalk)}
+header.top .wrap{padding-block:12px 0;position:relative}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:26px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.brand h1 span{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--ball);margin-left:6px;vertical-align:middle}
+.sync{font-size:12px;opacity:.8}
+nav.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:10px;border-top:1px solid color-mix(in srgb,var(--chalk) 45%,transparent)}
+nav.tabs button{background:none;border:0;color:var(--chalk);opacity:.72;padding:10px 2px;font-family:var(--f-display);font-size:16px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;position:relative}
+nav.tabs button+button{border-left:1px solid color-mix(in srgb,var(--chalk) 45%,transparent)}
+nav.tabs button[aria-selected="true"]{opacity:1}
+nav.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:20%;right:20%;bottom:0;height:3px;background:var(--ball)}
+nav.tabs .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--ball);color:var(--ball-ink);font-family:var(--f-body);font-size:11px;line-height:18px;letter-spacing:0;vertical-align:2px}
+
+main .wrap{padding-block:16px 96px;display:flex;flex-direction:column;gap:16px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.period{display:flex;align-items:center;gap:6px}
+.period strong{font-family:var(--f-display);font-size:21px;font-weight:600;min-width:0;text-transform:capitalize}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:18px;line-height:1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
+.btn.primary{background:var(--court);border-color:var(--court);color:var(--chalk)}
+.btn.ghost{background:none}
+.btn.small{padding:5px 11px;font-size:13px}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.btn.danger.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+
+.note{background:var(--info-bg);border-radius:var(--r);padding:10px 12px;font-size:13.5px;color:var(--ink)}
+.alert{background:var(--warn-bg);color:var(--ink);border-radius:var(--r);padding:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.alert b{color:var(--warn)}
+
+/* Agenda semanal */
+.day{display:flex;flex-direction:column;gap:6px}
+.day h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+.day.today h3{color:var(--court)}
+.day.today h3::after{content:"hoy";font-family:var(--f-body);font-size:11px;letter-spacing:0;text-transform:none;background:var(--ball);color:var(--ball-ink);border-radius:9px;padding:0 7px}
+.empty-day{font-size:13px;color:var(--muted);padding:2px 0 4px}
+.slot{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.slot .time{font-family:var(--f-display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.slot .time small{display:block;font-family:var(--f-body);font-size:11px;color:var(--muted);font-weight:400;margin-top:3px}
+.slot .who{min-width:0}
+.slot .who b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot .who span{font-size:12.5px;color:var(--muted)}
+.slot.st-cancelada,.slot.st-lluvia{opacity:.62}
+.slot.st-cancelada .who b,.slot.st-lluvia .who b{text-decoration:line-through}
+
+.chip{font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.chip.agendada{background:var(--info-bg);color:var(--court)}
+.chip.pendiente{background:var(--warn-bg);color:var(--warn)}
+.chip.realizada{background:var(--ok-bg);color:var(--ok)}
+.chip.cobrada{background:var(--warn-bg);color:var(--warn)}
+.chip.cancelada,.chip.lluvia{background:var(--line);color:var(--muted)}
+.chip.debe{background:var(--bad-bg);color:var(--bad)}
+.chip.aldia{background:var(--ok-bg);color:var(--ok)}
+.chip.favor{background:var(--info-bg);color:var(--court)}
+.chip.nada{background:var(--line);color:var(--muted)}
+:root[data-theme="dark"] .chip.agendada,:root[data-theme="dark"] .chip.favor{color:var(--chalk)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.agendada,:root:not([data-theme="light"]) .chip.favor{color:var(--chalk)}}
+
+/* Cobros */
+.score{display:grid;grid-template-columns:repeat(3,1fr);background:var(--court-2);color:var(--chalk);border-radius:var(--r);overflow:hidden}
+.score div{padding:12px 10px;min-width:0}
+.score div+div{border-left:1px solid color-mix(in srgb,var(--chalk) 25%,transparent)}
+.score label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.8}
+.score output{display:block;font-family:var(--f-display);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score .hl output{color:var(--ball)}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.row{border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row>button{display:grid;grid-template-columns:1fr auto;gap:4px 12px;width:100%;text-align:left;background:none;border:0;padding:12px 14px}
+.row .name{font-weight:600;min-width:0}
+.row .meta{grid-column:1;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row .right{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px}
+.row .amt{font-variant-numeric:tabular-nums;font-weight:600;font-size:15px}
+.detail{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.detail table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+.detail td{padding:5px 0;border-bottom:1px dashed var(--line)}
+.detail td:last-child{text-align:right}
+.detail .actions{display:flex;gap:8px;flex-wrap:wrap}
+.muted{color:var(--muted)}
+
+/* Alumnos */
+.student{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:12px 14px}
+.avatar{width:40px;height:40px;border-radius:50%;background:var(--info-bg);color:var(--court);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:17px}
+.student .s-main{min-width:0}
+.student .s-main b{display:block}
+.student .s-main span{font-size:12.5px;color:var(--muted)}
+.student .price{font-variant-numeric:tabular-nums;font-size:13.5px;color:var(--muted);text-align:right}
+
+.empty{text-align:center;padding:36px 16px;color:var(--muted);display:flex;flex-direction:column;gap:10px;align-items:center}
+.empty strong{font-family:var(--f-display);font-size:22px;color:var(--ink);font-weight:600}
+
+.fab{position:fixed;right:max(16px,calc(env(safe-area-inset-right,0px) + 16px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:6;
+  background:var(--ball);color:var(--ball-ink);border:0;border-radius:999px;padding:14px 20px;font-weight:700;font-size:15px;box-shadow:0 6px 18px rgba(10,30,50,.25)}
+
+/* Hoja inferior */
+.scrim{position:fixed;inset:0;background:rgba(8,18,28,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);color:var(--ink);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheet h2{margin:0;font-family:var(--f-display);font-size:24px;font-weight:600}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label,.field>span{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 11px;width:100%;min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.checks label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:14px;cursor:pointer}
+.checks input{accent-color:var(--court)}
+.checks label:has(input:checked){background:var(--court);border-color:var(--court);color:var(--chalk)}
+.states{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.states button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px;text-align:left;font-size:13.5px}
+.states button b{display:block;font-size:14px}
+.states button span{color:var(--muted);font-size:12px}
+.states button[aria-pressed="true"]{border-color:var(--court);box-shadow:inset 0 0 0 1px var(--court)}
+.sheet-actions{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.sheet-actions .end{display:flex;gap:8px;margin-left:auto}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+/* Ajustes, cobro, calendario */
+.hdr-r{display:flex;align-items:center;gap:10px}
+.gear{background:none;border:1px solid color-mix(in srgb,var(--chalk) 55%,transparent);color:var(--chalk);border-radius:999px;padding:3px 11px;font-size:12.5px;font-weight:600}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;color:inherit}
+.btn.wa{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.linkish{background:none;border:0;padding:0;color:inherit;font-weight:600;text-decoration:underline}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.seg button{border:0;background:none;border-radius:999px;padding:6px 16px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--court);color:var(--chalk)}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .dow{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:center;padding:2px 0}
+.cal .cell{min-width:0;min-height:54px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:4px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;overflow:hidden}
+.cal .cell.out{opacity:.45}
+.cal .cell[aria-pressed="true"]{border-color:var(--court);box-shadow:inset 0 0 0 1px var(--court)}
+.cal .n{font-variant-numeric:tabular-nums;font-weight:600;font-size:13px;width:22px;height:22px;display:grid;place-items:center;border-radius:50%}
+.cal .is-today .n{background:var(--ball);color:var(--ball-ink)}
+.cal .dots{display:flex;flex-wrap:wrap;gap:3px;padding-left:3px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none}
+.dot.agendada{background:var(--court)}.dot.realizada{background:var(--ok)}.dot.cobrada,.dot.pendiente{background:var(--warn)}.dot.cancelada,.dot.lluvia{background:var(--muted);opacity:.55}
+.cal .items{display:none;flex-direction:column;gap:2px;width:100%;min-width:0}
+.it{display:block;font-size:11px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:4px;padding:1px 4px;background:var(--info-bg);font-variant-numeric:tabular-nums}
+.it.realizada{background:var(--ok-bg)}.it.cobrada,.it.pendiente{background:var(--warn-bg)}.it.cancelada,.it.lluvia{background:var(--line);text-decoration:line-through;color:var(--muted)}
+.more{font-size:11px;color:var(--muted);padding-left:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.sec{margin:8px 0 0;font-family:var(--f-display);font-size:20px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+.mini{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mini b{color:var(--ink)}
+.gline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.gline:first-child{border-top:0}
+.gline .g-main{min-width:0}
+.gline .g-main span{display:block;font-size:12.5px;color:var(--muted)}
+.gline .g-r{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table.hist{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+table.hist th,table.hist td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+table.hist th:first-child,table.hist td:first-child{text-align:left;text-transform:capitalize}
+table.hist th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+table.hist tr.cur td{font-weight:600;background:var(--info-bg)}
+table.hist tfoot td{font-weight:700;border-bottom:0}
+table.hist .neg{color:var(--bad)}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.picker{position:relative}
+.pick-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 20px rgba(10,30,50,.18);max-height:260px;overflow:auto}
+.pick-list button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:10px 12px;font-size:14px}
+.pick-list button:first-child{border-top:0}
+.pick-list button b{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-list span{color:var(--bad);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pick-empty{padding:10px 12px;color:var(--muted);font-size:13.5px}
+.search{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 14px;width:100%}
+.cierre-item{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--bg)}
+.ci-top{display:flex;gap:10px;align-items:baseline;min-width:0}
+.ci-top b{font-family:var(--f-display);font-size:19px;font-variant-numeric:tabular-nums}
+.ci-top span{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px}
+.opts button[aria-pressed="true"]{background:var(--court);border-color:var(--court);color:var(--chalk)}
+.check-row{display:flex;gap:10px;align-items:flex-start;font-size:14px;cursor:pointer}
+.check-row input{margin-top:3px;accent-color:var(--court)}
+.tx{border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.tx-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tx-top b{font-size:18px;font-variant-numeric:tabular-nums}
+.tx-txt{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.tx-txt a{color:inherit;font-weight:600}
+@media (min-width:640px){.cal .cell{min-height:96px}.cal .items{display:flex}.cal .dots{display:none}}
+/* Pantalla de acceso */
+.auth{min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+.auth-top{background:var(--court);color:var(--chalk);border-bottom:3px solid var(--chalk);padding-top:env(safe-area-inset-top,0px)}
+.auth-top .wrap{padding-block:28px 22px}
+.auth-top p{margin:10px 0 0;opacity:.85;font-size:14.5px}
+.auth-body{padding-block:22px 40px;display:flex;flex-direction:column;gap:16px;max-width:460px}
+.auth-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px}
+.auth-card h2{margin:0;font-family:var(--f-display);font-size:24px;font-weight:600}
+.auth .btn{padding:12px 16px;font-size:15px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px}
+.auth .btn[disabled]{opacity:.6;cursor:default}
+.g-logo{width:18px;height:18px;flex:none}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.06em}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+.msg{border-radius:var(--r);padding:10px 12px;font-size:14px}
+.msg.ok{background:var(--ok-bg);color:var(--ink)}
+.msg.bad{background:var(--bad-bg);color:var(--ink)}
+.acct{font-weight:600;overflow-wrap:anywhere}
+@media (max-width:420px){.score output{font-size:20px}.grid2{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+
+</head>
+<body>
+<section class="auth" id="auth" hidden>
+  <div class="auth-top"><div class="wrap"><div class="brand"><h1>Agenda de tenis<span aria-hidden="true"></span></h1></div><p>Tus clases, cobros y finanzas, guardados en tu cuenta y en todos tus dispositivos.</p></div></div>
+  <div class="wrap auth-body" id="auth-body"></div>
+</section>
+<div id="app-shell" hidden>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Agenda de tenis<span aria-hidden="true"></span></h1><div class="hdr-r"><span class="sync" id="sync">Cargando…</span><button class="gear" data-act="config">Ajustes</button></div></div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="agenda" aria-selected="true">Agenda</button>
+      <button role="tab" data-tab="cobros" aria-selected="false">Cobros</button>
+      <button role="tab" data-tab="finanzas" aria-selected="false">Finanzas</button>
+      <button role="tab" data-tab="alumnos" aria-selected="false">Alumnos</button>
+    </nav>
+  </div>
+</header>
+<main><div class="wrap" id="view"></div></main>
+<button class="fab" id="fab">+ Clase</button>
+<div id="modal"></div>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+const S={alumnos:[],clases:[],pagos:[],config:[],clubes:[],gastos:[],transferencias:[]};
+const loaded={alumnos:false,clases:false,pagos:false,config:false,clubes:false,gastos:false,transferencias:false};
+let db=null, mode='loading';
+const ui={tab:'agenda',week:mondayOf(today()),month:today().slice(0,7),open:null,armed:null,agView:'lista',calMonth:today().slice(0,7),selDay:today()};
+try{const t=localStorage.getItem('tenis-tab');if(t)ui.tab=t;const v=localStorage.getItem('tenis-agview');if(v)ui.agView=v;}catch(e){}
+const cfg=()=>(S.config||[]).find(x=>x.id==='perfil')||{};
+function waUrl(tel,msg){let d=String(tel||'').replace(/\D/g,'');if(!d)return '';if(d.length===9&&d[0]==='9')d='56'+d;return 'https://wa.me/'+d+'?text='+encodeURIComponent(msg)}
+if(['agenda','cobros','finanzas','alumnos'].includes(location.hash.slice(1)))ui.tab=location.hash.slice(1);
+
+const ESTADOS={
+  agendada:{t:'Agendada',d:'Aún no ocurre'},
+  realizada:{t:'Realizada',d:'Se cobra'},
+  cobrada:{t:'Canceló tarde',d:'Menos de 24 h, se cobra'},
+  cancelada:{t:'Cancelada',d:'Con aviso, no se cobra'},
+  lluvia:{t:'Suspendida',d:'Lluvia o cancha, no se cobra'}
+};
+const COBRABLE=['realizada','cobrada'];
+
+/* ---------- utilidades ---------- */
+function today(){const d=new Date();return iso(d)}
+function iso(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function parse(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return iso(d)}
+function mondayOf(s){const d=parse(s);const w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return iso(d)}
+function addMonths(m,n){const[y,mm]=m.split('-').map(Number);const d=new Date(y,mm-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+const clp=n=>'$'+Math.round(n||0).toLocaleString('es-CL');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dayName=s=>parse(s).toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace('.','');
+const monthName=m=>parse(m+'-01').toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const alumno=id=>S.alumnos.find(a=>a.id===id);
+const nombres=c=>(c.alumnoIds||[]).map(id=>alumno(id)?.nombre||'Alumno eliminado');
+function estadoVisible(c){return (c.estado==='agendada'&&c.fecha<today())?'pendiente':c.estado}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,2200)}
+
+/* ---------- almacenamiento ---------- */
+async function save(col,obj){
+  if(mode==='db'){
+    try{await db.collection(col).doc(obj.id).set(obj)}catch(e){toast(e.code==='quota_exceeded'?'Se llenó el espacio: borra clases antiguas':'No se pudo guardar, intenta de nuevo');throw e}
+  }else{
+    const i=S[col].findIndex(x=>x.id===obj.id);if(i>=0)S[col][i]=obj;else S[col].push(obj);persistLocal();render();
+  }
+}
+async function removeDoc(col,id){
+  if(mode==='db'){try{await db.collection(col).doc(id).delete()}catch(e){toast('No se pudo borrar');throw e}}
+  else{S[col]=S[col].filter(x=>x.id!==id);persistLocal();render()}
+}
+function persistLocal(){
+  if(cloud&&user){ver++;store.set(kData(user.id),JSON.stringify(S));store.set(kDirty(user.id),'1');schedulePush();return}
+  try{localStorage.setItem('tenis-local',JSON.stringify(S))}catch(e){}
+}
+function demo(){
+  const m=mondayOf(today()), pm=addDays(m,-7);
+  const A=[{id:'a1',nombre:'Ejemplo: Sofía R.',telefono:'+56 9 1111 1111',tarifa:25000,pago:'fin de mes'},
+           {id:'a2',nombre:'Ejemplo: Tomás P.',telefono:'+56 9 2222 2222',tarifa:22000,pago:'anticipado'},
+           {id:'a3',nombre:'Ejemplo: Camila V.',telefono:'',tarifa:18000,pago:'fin de mes'}];
+  const C=[{id:'c1',fecha:pm,hora:'18:00',duracion:60,alumnoIds:['a1'],estado:'realizada'},
+           {id:'c2',fecha:addDays(pm,2),hora:'19:00',duracion:60,alumnoIds:['a2','a3'],estado:'realizada'},
+           {id:'c3',fecha:addDays(pm,4),hora:'08:00',duracion:90,alumnoIds:['a1'],estado:'cobrada'},
+           {id:'c4',fecha:m,hora:'18:00',duracion:60,alumnoIds:['a1'],estado:'agendada'},
+           {id:'c5',fecha:addDays(m,2),hora:'19:00',duracion:60,alumnoIds:['a2','a3'],estado:'agendada'}];
+  const P=[{id:'p1',alumnoId:'a2',mes:today().slice(0,7),monto:88000,fecha:today(),medio:'transferencia'}];
+  const K=[{id:'k1',nombre:'Ejemplo: Club Norte',costoHora:12000,nota:'Se paga a fin de mes por transferencia'},{id:'k2',nombre:'Ejemplo: Canchas Parque',costoHora:9000,nota:'Se paga al reservar'}];
+  C.forEach((c,i)=>c.clubId=i%2?'k2':'k1');
+  const G=[{id:'g1',tipo:'otro',clubId:'',concepto:'Tubos de pelotas',monto:15990,mes:today().slice(0,7),fecha:today()}];
+  return {alumnos:A,clases:C,pagos:P,config:[],clubes:K,gastos:G};
+}
+async function init(){
+  if(!window.claude){startCloud();return}
+  document.getElementById('app-shell').hidden=false;
+  render();
+  let d=null;
+  try{d=window.claude?await window.claude.use('db'):null}catch(e){d=null}
+  if(d){
+    db=d;mode='db';
+    for(const col of ['alumnos','clases','pagos','config','clubes','gastos','transferencias']){
+      db.collection(col).onSnapshot(s=>{S[col]=s.docs.map(x=>({...x.data(),id:x.id}));loaded[col]=true;render();afterLoad()},
+        e=>{document.getElementById('sync').textContent='Sin conexión'});
+    }
+  }else{
+    mode='local';
+    let data=null;try{data=JSON.parse(localStorage.getItem('tenis-local')||'null')}catch(e){}
+    Object.assign(S,data||demo());S.config=S.config||[];S.clubes=S.clubes||[];S.gastos=S.gastos||[];S.transferencias=S.transferencias||[];loaded.transferencias=true;render();afterLoad();
+  }
+}
+
+/* ---------- cuenta y nube (Supabase) ---------- */
+// Todo el estado (S) se guarda como un solo JSON en app_data.data. Siempre queda una copia en el teléfono
+// (tenis-cloud-<usuario>) y una marca de "cambios por subir" (tenis-dirty-<usuario>) para reintentar sin señal.
+const SB_JS='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+const DEMO_IDS=new Set(['a1','a2','a3','c1','c2','c3','c4','c5','p1','k1','k2','g1']);
+const SYNC_TXT={ok:'Guardado en la nube',saving:'Guardando…',offline:'Sin conexión · guardado en el teléfono'};
+let sub={activo:true,tipo:'',dias:0};
+const syncTxt=st=>SYNC_TXT[st]+(sub.activo&&sub.tipo==='prueba'?' · Prueba: '+sub.dias+(sub.dias==1?' día':' días'):'');
+async function checkSub(u){
+  const key='tenis-sub-'+u.id;
+  try{const{data,error}=await sb.rpc('estado_suscripcion',{p_app:'tenis'});if(error||!data)throw error||new Error('sub');sub=data;store.set(key,JSON.stringify({fin:data.fin,tipo:data.tipo}))}
+  catch(_){const c=readJSON(key);if(c&&c.fin){const ms=new Date(c.fin)-Date.now();sub={activo:ms>0,tipo:c.tipo,dias:Math.max(0,Math.ceil(ms/864e5))}}}
+}
+let sb=null,clientP=null,user=null,cloud=false,syncState='ok',needsLoad=false,shownFor=null;
+let pushT=null,retryT=null,loadT=null,retryMs=0,ver=0,pushing=null,pushAgain=false,mig=null;
+const store={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}},del(k){try{localStorage.removeItem(k)}catch(_){}}};
+const readJSON=k=>{try{return JSON.parse(store.get(k)||'null')}catch(_){return null}};
+const kData=id=>'tenis-cloud-'+id, kDirty=id=>'tenis-dirty-'+id;
+const isDirty=()=>!!user&&store.get(kDirty(user.id))==='1';
+const hasAny=d=>!!d&&Object.keys(S).some(k=>Array.isArray(d[k])&&d[k].length);
+const realData=d=>!!d&&Object.keys(S).some(k=>Array.isArray(d[k])&&d[k].some(x=>!(x&&DEMO_IDS.has(x.id))));
+function applyState(d){for(const k of Object.keys(S))S[k]=d&&Array.isArray(d[k])?d[k]:[];loaded.transferencias=true}
+function resumen(d){const n=k=>(d&&Array.isArray(d[k])?d[k].length:0);return `${n('alumnos')} alumno${n('alumnos')===1?'':'s'}, ${n('clases')} clase${n('clases')===1?'':'s'} y ${n('pagos')} pago${n('pagos')===1?'':'s'}`}
+// Lo que trae la URL al volver de Google o del enlace del correo. Se lee al cargar y la URL no se toca
+// hasta que la sesión quedó creada (o falló), para que Supabase alcance a procesarla.
+const AUTH_URL=(()=>{try{const h=new URLSearchParams(location.hash.slice(1)),q=new URLSearchParams(location.search);
+  return {access_token:h.get('access_token')||'',refresh_token:h.get('refresh_token')||'',code:q.get('code')||'',
+    error:h.get('error_description')||q.get('error_description')||h.get('error')||q.get('error')||''}}catch(_){return {}}})();
+const authPending=()=>!!((AUTH_URL.access_token&&AUTH_URL.refresh_token)||AUTH_URL.code);
+function cleanAuthUrl(){try{history.replaceState(history.state,'',location.pathname)}catch(_){}}
+let authReady=false,sbKey='';
+
+function setSync(st){syncState=st;const el=document.getElementById('sync');if(el&&cloud)el.textContent=syncTxt(st)}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('No se pudo cargar Supabase'));document.head.appendChild(s)})}
+async function getConfig(){
+  const C=window.APP_CONFIG||{};
+  if(!C.supabaseUrl||!C.supabaseKey)throw new Error('config');
+  return {SUPABASE_URL:C.supabaseUrl,SUPABASE_ANON_KEY:C.supabaseKey};
+}
+function ensureClient(){
+  if(!clientP)clientP=(async()=>{
+    const[c]=await Promise.all([getConfig(),window.supabase?null:loadScript(SB_JS)]);
+    if(sb)return sb; // un solo cliente por página
+    sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'implicit'}});
+    try{sbKey='sb-'+new URL(c.SUPABASE_URL).hostname.split('.')[0]+'-auth-token'}catch(_){}
+    sb.auth.onAuthStateChange((ev,session)=>{setTimeout(()=>onAuth(ev,session),0)});
+    return sb;
+  })().catch(e=>{clientP=null;throw e});
+  return clientP;
+}
+const errMsg=e=>String((e&&(e.message||e.msg||e.error_description))||e||'Error desconocido');
+// Explicación corta cuando se reconoce el caso, y siempre el mensaje real que devolvió Supabase.
+function authErrText(e){
+  const m=errMsg(e);
+  return esc(authHint(e,m))+`<br><small>Detalle: ${esc(m)}</small>`;
+}
+function authHint(e,m){
+  if(/invalid api key|no api key/i.test(m))return 'La clave de Supabase configurada en config.js no es válida.';
+  if(/rate|too many|429|seconds/i.test(m)||(e&&e.status===429))return 'Pediste varios enlaces seguidos. Espera un minuto e intenta de nuevo.';
+  if(/fetch|network|offline|load/i.test(m)||!navigator.onLine)return 'Sin conexión. Revisa tu internet e intenta de nuevo.';
+  if(/provider is not enabled|unsupported provider/i.test(m))return 'El acceso con Google aún no está activado. Usa tu correo por ahora.';
+  if(/expired|invalid/i.test(m))return 'El enlace venció o ya se usó. Pide uno nuevo.';
+  if(/signups not allowed/i.test(m))return 'Este correo no tiene permitido crear una cuenta.';
+  if(/email/i.test(m)&&/valid/i.test(m))return 'Ese correo no parece válido. Revísalo e intenta de nuevo.';
+  return 'No se pudo iniciar sesión.';
+}
+
+/* pantallas previas a la app */
+function showAuth(kind,msg,tone){
+  document.getElementById('app-shell').hidden=true;document.getElementById('auth').hidden=false;
+  document.getElementById('modal').innerHTML='';
+  const body=document.getElementById('auth-body');
+  const note=msg?`<div class="msg ${tone||'bad'}" role="${tone==='ok'?'status':'alert'}">${msg}</div>`:'';
+  if(kind==='loading'){body.innerHTML=`<div class="empty">${esc(msg||'Cargando…')}</div>`;return}
+  if(kind==='blocked'){const C=window.APP_CONFIG||{};
+    const pay=C.payUrl?`<a class="btn primary" href="${esc(C.payUrl)}" target="_blank" rel="noopener" style="text-decoration:none;text-align:center">Activar mi cuenta</a>`:`<p class="muted" style="margin:0">Para activar tu cuenta escribe a ${esc(C.contacto||'quien te entregó la app')}.</p>`;
+    body.innerHTML=`<div class="auth-card"><h2>Terminó tu prueba gratis</h2><p class="muted" style="margin:0">Tus 7 días de prueba terminaron. Tus alumnos, clases y cobros siguen guardados y seguros en tu cuenta. Para seguir usando la agenda, activa tu suscripción.</p>${pay}<button class="btn" data-act="sub-refresh">Ya pagué, actualizar</button><button class="btn ghost" data-act="del-logout">Cerrar sesión</button></div>`;return}
+  if(kind==='load-error'){body.innerHTML=`<div class="auth-card"><h2>No pudimos abrir tu agenda</h2>${note}<button class="btn primary" data-act="sb-retry">Reintentar</button><button class="btn ghost" data-act="del-logout">Usar otra cuenta</button></div>`;return}
+  if(kind==='migrate'){
+    const {remote,local}=mig;
+    body.innerHTML=remote?
+     `<div class="auth-card"><h2>¿Qué datos conservas?</h2><p class="muted" style="margin:0">Tienes datos en este teléfono y también en tu cuenta. Elige cuáles quedan; los otros se reemplazan.</p>
+      <button class="btn primary" data-act="mig-cloud">Conservar los de mi cuenta<br>(${resumen(remote)})</button>
+      <button class="btn" data-act="mig-phone">Conservar los de este teléfono<br>(${resumen(local)})</button></div>`:
+     `<div class="auth-card"><h2>Encontramos datos en este teléfono</h2><p class="muted" style="margin:0">Tienes ${resumen(local)} guardados aquí. Súbelos a tu cuenta para tenerlos siempre respaldados y en todos tus dispositivos.</p>
+      <button class="btn primary" data-act="mig-phone">Subir mis datos actuales a mi cuenta</button>
+      <button class="btn ghost" data-act="mig-empty">Empezar con la cuenta vacía</button></div>`;
+    return;
+  }
+  body.innerHTML=`<div class="auth-card"><h2>Inicia sesión</h2>${note}
+   <button class="btn" data-act="sb-google"><svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continuar con Google</button>
+   <div class="or">o con tu correo</div>
+   <form id="f-login" style="display:flex;flex-direction:column;gap:12px" novalidate>
+    <div class="field"><label for="l-email">Correo</label><input id="l-email" type="email" inputmode="email" autocomplete="email" placeholder="tu@correo.com" required></div>
+    <button class="btn primary" type="submit">Enviarme un enlace para entrar</button>
+   </form>
+   <p class="muted" style="margin:0;font-size:13px">Sirve con cualquier correo: Gmail, Outlook, Hotmail, Yahoo, iCloud y otros. Te llega un enlace y entras sin contraseña.</p></div>`;
+}
+function showApp(){
+  document.getElementById('auth').hidden=true;document.getElementById('app-shell').hidden=false;
+  shownFor=user&&user.id;render();setSync(isDirty()?'saving':syncState);afterLoad();
+}
+
+/* sesión */
+// Decide la primera pantalla: mientras se resuelve la sesión se ve "Entrando…", nunca el login.
+async function startCloud(){
+  authReady=false;
+  showAuth('loading',authPending()?'Entrando…':'Cargando…');
+  try{await ensureClient()}catch(e){
+    if(openOffline())return;
+    showAuth('form',navigator.onLine?'No se pudo preparar el inicio de sesión.<br><small>Detalle: '+esc(errMsg(e))+'</small>':'Sin conexión. Conéctate a internet para iniciar sesión.','bad');return;
+  }
+  let err=AUTH_URL.error||'';
+  try{
+    if(AUTH_URL.access_token&&AUTH_URL.refresh_token){const{error}=await sb.auth.setSession({access_token:AUTH_URL.access_token,refresh_token:AUTH_URL.refresh_token});if(error)throw error}
+    else if(AUTH_URL.code){const{error}=await sb.auth.exchangeCodeForSession(AUTH_URL.code);if(error)throw error}
+  }catch(e){err=e}
+  if(authPending()||AUTH_URL.error)cleanAuthUrl(); // recién ahora, con la sesión ya guardada (o el error a la vista)
+  AUTH_URL.access_token=AUTH_URL.refresh_token=AUTH_URL.code=AUTH_URL.error='';
+  let session=null;
+  try{const r=await sb.auth.getSession();if(r.error)throw r.error;session=r.data.session}catch(e){err=err||e}
+  authReady=true;
+  if(session&&session.user){if(!user||user.id!==session.user.id||needsLoad)loadForUser(session.user);return}
+  // sin sesión válida: sin señal se sigue con la copia del teléfono
+  // si la sesión sigue guardada es porque no se pudo renovar (sin señal), no porque se haya cerrado
+  if(!err&&(!navigator.onLine||(sbKey&&store.get(sbKey)))&&openOffline())return;
+  showAuth('form',err?authErrText(err):'','bad');
+}
+function onAuth(ev,session){
+  if(!authReady)return; // la primera pantalla la decide startCloud
+  if(session&&session.user){
+    if(!['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(ev))return;
+    if(!user||user.id!==session.user.id||needsLoad)loadForUser(session.user);
+    else if(isDirty())push();
+    return;
+  }
+  if(ev==='SIGNED_OUT'&&user){resetUser();showAuth('form','Tu sesión se cerró. Vuelve a entrar.','bad')}
+}
+function openOffline(){
+  const last=readJSON('tenis-last-user');const data=last&&readJSON(kData(last.id));
+  if(!last||!data)return false;
+  user=last;cloud=true;mode='local';needsLoad=true;applyState(data);syncState='offline';
+  const c=readJSON('tenis-sub-'+last.id);if(c&&c.fin){const ms=new Date(c.fin)-Date.now();sub={activo:ms>0,tipo:c.tipo,dias:Math.max(0,Math.ceil(ms/864e5))};if(!sub.activo){showAuth('blocked');return true}}
+  showApp();
+  return true;
+}
+async function loadForUser(u){
+  const first=shownFor!==u.id;
+  if(!user||user.id!==u.id){autoDone=false;retryMs=0}
+  user={id:u.id,email:u.email||(user&&user.id===u.id?user.email:'')};cloud=true;mode='local';
+  store.set('tenis-last-user',JSON.stringify(user));
+  if(first&&!readJSON(kData(u.id)))showAuth('loading','Cargando tu agenda…');
+  await checkSub(u);
+  if(!user||user.id!==u.id)return;
+  if(!sub.activo){showAuth('blocked');return}
+  const cached=readJSON(kData(u.id));
+  if(first&&cached){applyState(cached);showApp()}
+  else if(first)showAuth('loading','Cargando tu agenda…');
+  let row;
+  try{const{data,error}=await sb.from('app_data').select('data').eq('user_id',u.id).maybeSingle();if(error)throw error;row=data}
+  catch(e){
+    if(!user||user.id!==u.id)return;
+    needsLoad=true;clearTimeout(loadT);loadT=setTimeout(()=>{if(user&&user.id===u.id&&needsLoad)loadForUser(u)},20000);
+    if(cached){setSync('offline');if(isDirty())push()}
+    else showAuth('load-error','No hay conexión con tu cuenta. Revisa tu internet e intenta de nuevo.','bad');
+    return;
+  }
+  if(!user||user.id!==u.id)return;
+  needsLoad=false;clearTimeout(loadT);
+  const remote=row&&hasAny(row.data)?row.data:null;
+  if(cached){ // esta cuenta ya se usa en este teléfono
+    if(isDirty())push(); // los cambios sin subir del teléfono son los más nuevos
+    else{applyState(remote||{});store.set(kData(u.id),JSON.stringify(S));setSync('ok');if(!document.getElementById('modal').innerHTML)render()}
+    if(first)showApp();return;
+  }
+  // primera vez con esta cuenta en este teléfono
+  const local=readJSON('tenis-local');
+  if(realData(local)){mig={remote,local};showAuth('migrate');return}
+  applyState(remote||{});store.set(kData(u.id),JSON.stringify(S));syncState='ok';showApp();
+}
+function finishMig(d,upload){
+  applyState(d);mig=null;
+  if(upload){persistLocal();push()}else{store.set(kData(user.id),JSON.stringify(S));syncState='ok'}
+  showApp();if(upload)toast('Subiendo tus datos a tu cuenta…');
+}
+function schedulePush(){clearTimeout(pushT);setSync('saving');pushT=setTimeout(push,1000)}
+function push(){
+  clearTimeout(pushT);pushT=null;clearTimeout(retryT);retryT=null;
+  if(pushing){pushAgain=true;return pushing}
+  if(!cloud||!user||!isDirty())return Promise.resolve();
+  const id=user.id,v=ver;setSync('saving');
+  pushing=(async()=>{
+    try{
+      if(!sb)await ensureClient();
+      const{data:{session}}=await sb.auth.getSession();
+      if(!session||session.user.id!==id)throw new Error('sin sesión');
+      const{error}=await sb.from('app_data').upsert({user_id:id,data:S,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      if(error)throw error;
+      if(v===ver)store.del(kDirty(id));
+      retryMs=0;if(user&&user.id===id)setSync(v===ver?'ok':'saving');
+    }catch(e){
+      if(!user||user.id!==id)return;
+      setSync('offline');retryMs=Math.min(retryMs?retryMs*2:5000,60000);retryT=setTimeout(push,retryMs);
+    }
+  })().finally(()=>{pushing=null;if(pushAgain){pushAgain=false;if(isDirty())schedulePush()}});
+  return pushing;
+}
+function resetUser(){
+  clearTimeout(pushT);clearTimeout(retryT);clearTimeout(loadT);pushT=retryT=loadT=null;
+  user=null;cloud=false;shownFor=null;needsLoad=false;mig=null;syncState='ok';mode='loading';autoDone=false;
+  store.del('tenis-last-user');applyState({});
+}
+async function logout(b){
+  if(!user){resetUser();showAuth('form');try{await sb&&sb.auth.signOut({scope:'local'})}catch(_){}return}
+  if(isDirty()&&ui.armed!=='logout'){
+    b.disabled=true;await push();b.disabled=false;
+    if(isDirty()){ui.armed='logout';b.textContent='Hay cambios sin subir. Toca otra vez para salir igual';b.classList.add('armed');return}
+  }
+  ui.armed=null;const id=user.id;
+  if(!isDirty()){store.del(kData(id));store.del(kDirty(id))} // si quedó algo sin subir, se guarda para la próxima vez
+  resetUser();closeSheet();showAuth('form','Cerraste sesión.','ok');
+  try{if(sb)await sb.auth.signOut({scope:'local'})}catch(_){}
+}
+window.addEventListener('online',()=>{if(!user)return;if(needsLoad&&sb)sb.auth.getSession().then(r=>{const s=r.data.session;if(s)loadForUser(s.user)}).catch(()=>{});else if(isDirty())push()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&pushT)push()});
+
+/* ---------- vistas ---------- */
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===ui.tab));
+  const debtors=resumenMes(today().slice(0,7)).filter(r=>r.saldo>0).length;
+  const cb=document.querySelector('[data-tab="cobros"]');cb.innerHTML='Cobros'+(debtors?`<span class="badge">${debtors}</span>`:'');
+  const sync=document.getElementById('sync');
+  if(cloud)sync.textContent=syncTxt(syncState);else if(mode==='db')sync.textContent='Guardado en la nube';else if(mode==='local')sync.textContent=window.claude?'Modo prueba':'Guardado en este teléfono';
+  const fab=document.getElementById('fab');
+  fab.textContent=ui.tab==='alumnos'?'+ Alumno':ui.tab==='cobros'?'+ Pago':ui.tab==='finanzas'?'+ Gasto':'+ Clase';
+  const v=document.getElementById('view');
+  if(mode==='loading'||(mode==='db'&&!Object.values(loaded).every(Boolean))){v.innerHTML='<div class="empty">Cargando agenda…</div>';return}
+  v.innerHTML=ui.tab==='agenda'?vAgenda():ui.tab==='cobros'?vCobros():ui.tab==='finanzas'?vFinanzas():vAlumnos();
+}
+
+function vLista(){
+  const end=addDays(ui.week,6);
+  const label=`${parse(ui.week).getDate()} – ${parse(end).toLocaleDateString('es-CL',{day:'numeric',month:'short'}).replace('.','')}`;
+  let h=`<div class="bar"><div class="period"><button class="icon-btn" data-act="wk" data-n="-7" aria-label="Semana anterior">‹</button><strong>${label}</strong><button class="icon-btn" data-act="wk" data-n="7" aria-label="Semana siguiente">›</button></div>`+
+    (ui.week!==mondayOf(today())?`<button class="btn small ghost" data-act="wk-today">Ir a hoy</button>`:'')+`</div>`;
+  if(!S.alumnos.length)h+=`<div class="empty"><strong>Parte por tus alumnos</strong>Agrega a tus alumnos con su valor por clase y después agenda sus horas.<button class="btn primary" data-act="new-alumno">+ Agregar alumno</button></div>`;
+  for(let i=0;i<7;i++){
+    const f=addDays(ui.week,i);
+    const cs=S.clases.filter(c=>c.fecha===f).sort((a,b)=>a.hora.localeCompare(b.hora));
+    h+=`<section class="day${f===today()?' today':''}"><h3>${dayName(f)}</h3>`;
+    if(!cs.length)h+=`<div class="empty-day">Sin clases</div>`;
+    for(const c of cs)h+=slotHtml(c);
+    h+=`</section>`;
+  }
+  if(mode==='local'&&S.alumnos.some(a=>/^Ejemplo:/.test(a.nombre)))h+=`<div class="note">Estás viendo datos de ejemplo. Bórralos en Ajustes → Empezar de cero.</div>`;
+  return h;
+}
+
+function vAgenda(){
+  const seg=`<div class="bar"><div class="seg" role="group" aria-label="Vista de la agenda">${[['lista','Semana'],['mes','Calendario']].map(([k,t])=>`<button data-act="agview" data-v="${k}" aria-pressed="${ui.agView===k}">${t}</button>`).join('')}</div></div>`;
+  return seg+pendAlert()+(ui.agView==='mes'?vCal():vLista());
+}
+function pendAlert(){
+  const pend=S.clases.filter(c=>c.estado==='agendada'&&c.fecha<today());
+  return pend.length?`<div class="alert"><span><b>${pend.length} ${pend.length===1?'clase pasada':'clases pasadas'}</b> sin marcar. Sin marcar no suman al cobro.</span><button class="btn small" data-act="open-cierre">Revisar y marcar</button></div>`:'';
+}
+function slotHtml(c){
+  const ev=estadoVisible(c), ns=nombres(c);
+  const tipo=ns.length>2?'Grupal':ns.length===2?'Dupla':'Individual';
+  return `<button class="slot st-${c.estado}" data-act="edit-clase" data-id="${esc(c.id)}">
+    <span class="time">${esc(c.hora)}<small>${c.duracion||60} min</small></span>
+    <span class="who"><b>${esc(ns.join(', ')||'Sin alumno')}</b><span>${tipo}${club(c.clubId)?' · '+esc(club(c.clubId).nombre):''}${c.nota?' · '+esc(c.nota):''}</span></span>
+    <span class="chip ${ev}">${ev==='pendiente'?'Por marcar':ESTADOS[c.estado]?.t||c.estado}</span></button>`;
+}
+function vCal(){
+  const m=ui.calMonth, start=mondayOf(m+'-01');
+  const last=addDays(addMonths(m,1)+'-01',-1), end=addDays(mondayOf(last),6);
+  const byDay={};for(const c of S.clases)(byDay[c.fecha]=byDay[c.fecha]||[]).push(c);
+  Object.values(byDay).forEach(a=>a.sort((x,y)=>x.hora.localeCompare(y.hora)));
+  const corto=c=>(nombres(c)[0]||'').replace(/^Ejemplo:\s*/,'').split(' ')[0]+(nombres(c).length>1?' +'+(nombres(c).length-1):'');
+  let h=`<div class="bar"><div class="period"><button class="icon-btn" data-act="cal" data-n="-1" aria-label="Mes anterior">‹</button><strong>${monthName(m)}</strong><button class="icon-btn" data-act="cal" data-n="1" aria-label="Mes siguiente">›</button></div>${m!==today().slice(0,7)?`<button class="btn small ghost" data-act="cal-today">Ir a hoy</button>`:''}</div>`;
+  h+=`<div class="cal">`+['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(d=>`<div class="dow">${d}</div>`).join('');
+  for(let f=start;f<=end;f=addDays(f,1)){
+    const cs=byDay[f]||[];
+    const cls=['cell',f.slice(0,7)!==m?'out':'',f===today()?'is-today':''].filter(Boolean).join(' ');
+    h+=`<button class="${cls}" data-act="pick-day" data-d="${f}" aria-pressed="${ui.selDay===f}" aria-label="${dayName(f)}, ${cs.length} ${cs.length===1?'clase':'clases'}"><span class="n">${parse(f).getDate()}</span>
+      <span class="items">${cs.slice(0,3).map(c=>`<span class="it ${estadoVisible(c)}">${esc(c.hora)} ${esc(corto(c))}</span>`).join('')}${cs.length>3?`<span class="more">+${cs.length-3} más</span>`:''}</span>
+      <span class="dots">${cs.slice(0,6).map(c=>`<span class="dot ${estadoVisible(c)}"></span>`).join('')}</span></button>`;
+  }
+  h+=`</div><div class="legend"><span><i class="dot agendada"></i>Agendada</span><span><i class="dot realizada"></i>Realizada</span><span><i class="dot pendiente"></i>Por marcar o canceló tarde</span><span><i class="dot cancelada"></i>Cancelada o lluvia</span></div>`;
+  const sd=ui.selDay, cs=byDay[sd]||[];
+  h+=`<section class="day${sd===today()?' today':''}"><h3>${dayName(sd)}</h3>${cs.length?cs.map(slotHtml).join(''):'<div class="empty-day">Sin clases. Toca + Clase para agendar este día.</div>'}</section>`;
+  return h;
+}
+function defaultFecha(){
+  if(ui.tab==='agenda'&&ui.agView==='mes')return ui.selDay;
+  return (ui.week<=today()&&today()<=addDays(ui.week,6))?today():ui.week;
+}
+
+function resumenMes(m){
+  return S.alumnos.map(a=>{
+    const cs=S.clases.filter(c=>c.fecha.startsWith(m)&&(c.alumnoIds||[]).includes(a.id)).sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
+    const cobr=cs.filter(c=>COBRABLE.includes(c.estado));
+    const monto=cobr.reduce((s,c)=>s+(Number(a.tarifa)||0)*((c.duracion||60)/60),0);
+    const pagos=S.pagos.filter(p=>p.alumnoId===a.id&&p.mes===m);
+    const pagado=pagos.reduce((s,p)=>s+(Number(p.monto)||0),0);
+    const porMarcar=cs.filter(c=>c.estado==='agendada'&&c.fecha<today()).length;
+    const futuras=cs.filter(c=>c.estado==='agendada'&&c.fecha>=today()).length;
+    return {a,cs,cobr,monto,pagos,pagado,saldo:monto-pagado,porMarcar,futuras,
+      hechas:cobr.filter(c=>c.estado==='realizada').length,tarde:cobr.filter(c=>c.estado==='cobrada').length};
+  }).filter(r=>r.cs.length||r.pagos.length);
+}
+function estadoPago(r){
+  if(r.saldo>0)return `<span class="chip debe">Debe ${clp(r.saldo)}</span>`;
+  if(r.saldo<0)return `<span class="chip favor">A favor ${clp(-r.saldo)}</span>`;
+  if(r.monto>0)return `<span class="chip aldia">Al día</span>`;
+  return `<span class="chip nada">Sin cobro aún</span>`;
+}
+function vCobros(){
+  const rs=resumenMes(ui.month).sort((x,y)=>y.saldo-x.saldo);
+  const total=rs.reduce((s,r)=>s+r.monto,0), pag=rs.reduce((s,r)=>s+Math.min(r.pagado,r.monto),0), pend=rs.reduce((s,r)=>s+Math.max(r.saldo,0),0);
+  const nclases=new Set(rs.flatMap(r=>r.cobr.map(c=>c.id))).size;
+  let h=`<div class="bar"><div class="period"><button class="icon-btn" data-act="mo" data-n="-1" aria-label="Mes anterior">‹</button><strong>${monthName(ui.month)}</strong><button class="icon-btn" data-act="mo" data-n="1" aria-label="Mes siguiente">›</button></div><span class="muted" style="font-size:13px">${nclases} ${nclases===1?'clase cobrable':'clases cobrables'}</span></div>
+  <div class="score"><div><label>Por cobrar</label><output>${clp(total)}</output></div><div><label>Pagado</label><output>${clp(pag)}</output></div><div class="hl"><label>Pendiente</label><output>${clp(pend)}</output></div></div>`;
+  if(mode==='db')h+=`<div class="row-actions"><button class="btn small" data-act="scan-tx">Revisar transferencias en Gmail</button></div>`;
+  if(!cfg().link&&!cfg().transf)h+=`<div class="note">Para cobrar con un toque, agrega tu link de pago o tus datos de transferencia en <button class="linkish" data-act="config">Ajustes</button>.</div>`;
+  if(!rs.length)return h+`<div class="empty"><strong>Sin movimiento este mes</strong>Cuando marques clases como realizadas aparecerán aquí, con lo que debe cada alumno.</div>`;
+  h+=`<div class="list">`;
+  for(const r of rs){
+    const open=ui.open===r.a.id;
+    const extra=[r.tarde?`${r.tarde} canceló tarde`:'',r.porMarcar?`${r.porMarcar} por marcar`:'',r.futuras?`${r.futuras} por venir`:''].filter(Boolean).join(' · ');
+    h+=`<div class="row"><button data-act="toggle" data-id="${esc(r.a.id)}" aria-expanded="${open}">
+      <span class="name">${esc(r.a.nombre)}</span>
+      <span class="meta">${r.hechas} ${r.hechas===1?'clase hecha':'clases hechas'}${extra?' · '+extra:''} · paga ${esc(r.a.pago||'fin de mes')}</span>
+      <span class="right"><span class="amt">${clp(r.monto)}</span>${estadoPago(r)}</span></button>`;
+    if(open){
+      h+=`<div class="detail"><table><tbody>`;
+      for(const c of r.cs){const ev=estadoVisible(c);const cob=COBRABLE.includes(c.estado);
+        h+=`<tr><td>${dayName(c.fecha)} · ${esc(c.hora)}</td><td><span class="chip ${ev}">${ev==='pendiente'?'Por marcar':ESTADOS[c.estado].t}</span></td><td>${cob?clp((Number(r.a.tarifa)||0)*((c.duracion||60)/60)):'—'}</td></tr>`}
+      for(const p of r.pagos)h+=`<tr><td>Pago ${esc(p.medio||'')} · ${dayName(p.fecha||ui.month+'-01')}</td><td></td><td style="color:var(--ok)">− ${clp(p.monto)} <button class="btn small ghost" data-act="del-pago" data-id="${esc(p.id)}" aria-label="Borrar pago">${ui.armed===p.id?'¿Borrar?':'×'}</button></td></tr>`;
+      h+=`</tbody></table><div class="actions"><button class="btn small primary" data-act="new-pago" data-id="${esc(r.a.id)}">Registrar pago</button>${(()=>{const w=waUrl(r.a.telefono,resumenTexto(r.a.id));return w?`<a class="btn small wa" href="${esc(w)}" target="_blank" rel="noopener">${r.saldo>0?'Cobrar por WhatsApp':'Enviar resumen por WhatsApp'}</a>`:''})()}<button class="btn small" data-act="copy" data-id="${esc(r.a.id)}">Copiar mensaje</button></div>${!r.a.telefono?`<span class="muted" style="font-size:12.5px">Agrega su WhatsApp en Alumnos para enviarle el cobro directo.</span>`:''}</div>`;
+    }
+    h+=`</div>`;
+  }
+  return h+`</div><p class="muted" style="font-size:12.5px;margin:0">Se cobran las clases realizadas y las canceladas con menos de 24 h. Las de 90 min se cobran 1,5 veces la tarifa.</p>`;
+}
+
+/* ---------- finanzas ---------- */
+const club=id=>id?S.clubes.find(k=>k.id===id):undefined;
+const horasDe=c=>(c.duracion||60)/60;
+const costoClase=c=>{const k=club(c.clubId);return k?(Number(k.costoHora)||0)*horasDe(c):0};
+const ingresoClase=c=>(c.alumnoIds||[]).reduce((s,id)=>s+(Number(alumno(id)?.tarifa)||0)*horasDe(c),0);
+const sum=(arr,f)=>arr.reduce((s,x)=>s+(Number(f(x))||0),0);
+const fmtH=h=>String(Math.round(h*10)/10).replace('.',',')+' h';
+const nomCorto=c=>(nombres(c)[0]||'').replace(/^Ejemplo:\s*/,'').split(' ')[0]+(nombres(c).length>1?' +'+(nombres(c).length-1):'');
+function finMes(m){
+  const cs=S.clases.filter(c=>c.fecha.startsWith(m)&&COBRABLE.includes(c.estado));
+  const g=S.gastos.filter(x=>x.mes===m);
+  const gen=sum(cs,ingresoClase), canchas=sum(cs,costoClase), otros=sum(g.filter(x=>x.tipo==='otro'),x=>x.monto);
+  return {cs,gen,canchas,otros,gan:gen-canchas-otros,pagClub:sum(g.filter(x=>x.tipo==='club'),x=>x.monto),
+    cobrado:sum(S.pagos.filter(p=>p.mes===m),p=>p.monto),sinClub:cs.filter(c=>!club(c.clubId)).length,otrosList:g.filter(x=>x.tipo==='otro')};
+}
+function clubMes(id,m){
+  const cs=S.clases.filter(c=>c.clubId===id&&c.fecha.startsWith(m)&&COBRABLE.includes(c.estado)).sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
+  const pagos=S.gastos.filter(g=>g.tipo==='club'&&g.clubId===id&&g.mes===m);
+  const costo=sum(cs,costoClase), pagado=sum(pagos,p=>p.monto);
+  return {cs,pagos,costo,pagado,saldo:costo-pagado,horas:sum(cs,horasDe)};
+}
+function vFinanzas(){
+  const f=finMes(ui.month);
+  let h=`<div class="bar"><div class="period"><button class="icon-btn" data-act="mo" data-n="-1" aria-label="Mes anterior">‹</button><strong>${monthName(ui.month)}</strong><button class="icon-btn" data-act="mo" data-n="1" aria-label="Mes siguiente">›</button></div><span class="muted" style="font-size:13px">${f.cs.length} ${f.cs.length===1?'clase cobrable':'clases cobrables'}</span></div>
+  <div class="score"><div><label>Generado</label><output>${clp(f.gen)}</output></div><div><label>Canchas y gastos</label><output>${clp(f.canchas+f.otros)}</output></div><div class="hl"><label>Ganancia</label><output>${clp(f.gan)}</output></div></div>
+  <div class="mini"><span>Cobrado a alumnos: <b>${clp(f.cobrado)}</b> de ${clp(f.gen)}</span><span>Pagado a clubes: <b>${clp(f.pagClub)}</b> de ${clp(f.canchas)}</span></div>`;
+  if(f.sinClub)h+=`<div class="alert"><span><b>${f.sinClub} ${f.sinClub===1?'clase':'clases'} sin club</b>. No suman costo de cancha; asígnales un club desde la Agenda.</span></div>`;
+
+  h+=`<h2 class="sec">Pagos a clubes</h2>`;
+  if(!S.clubes.length){h+=`<div class="empty"><strong>Agrega los clubes donde haces clases</strong>Con el costo por hora de cancha de cada uno, la app calcula cuánto le debes a cada club en el mes.<button class="btn primary" data-act="new-club">+ Agregar club</button></div>`}
+  else{
+    h+=`<div class="list">`;
+    for(const k of [...S.clubes].sort((a,b)=>a.nombre.localeCompare(b.nombre))){
+      const r=clubMes(k.id,ui.month), open=ui.openClub===k.id;
+      const chip=r.saldo>0?`<span class="chip debe">Debes ${clp(r.saldo)}</span>`:r.saldo<0?`<span class="chip favor">A favor ${clp(-r.saldo)}</span>`:r.costo>0?`<span class="chip aldia">Pagado</span>`:`<span class="chip nada">Sin uso</span>`;
+      h+=`<div class="row"><button data-act="toggle-club" data-id="${esc(k.id)}" aria-expanded="${open}">
+        <span class="name">${esc(k.nombre)}</span>
+        <span class="meta">${r.cs.length} ${r.cs.length===1?'clase':'clases'} · ${fmtH(r.horas)} · ${clp(k.costoHora)}/h</span>
+        <span class="right"><span class="amt">${clp(r.costo)}</span>${chip}</span></button>`;
+      if(open){
+        h+=`<div class="detail">${k.nota?`<span class="muted" style="font-size:13px">${esc(k.nota)}</span>`:''}<table><tbody>`;
+        for(const c of r.cs)h+=`<tr><td>${dayName(c.fecha)} · ${esc(c.hora)}</td><td>${esc(nomCorto(c))}</td><td>${clp(costoClase(c))}</td></tr>`;
+        if(!r.cs.length)h+=`<tr><td class="muted">Sin clases este mes</td><td></td><td></td></tr>`;
+        for(const p of r.pagos)h+=`<tr><td>Pago · ${dayName(p.fecha||ui.month+'-01')}</td><td></td><td style="color:var(--ok)">− ${clp(p.monto)} <button class="btn small ghost" data-act="del-gasto" data-id="${esc(p.id)}" aria-label="Borrar pago">${ui.armed===p.id?'¿Borrar?':'×'}</button></td></tr>`;
+        h+=`</tbody></table><div class="row-actions"><button class="btn small primary" data-act="new-gasto" data-tipo="club" data-id="${esc(k.id)}">Registrar pago al club</button><button class="btn small" data-act="edit-club" data-id="${esc(k.id)}">Editar club</button></div></div>`;
+      }
+      h+=`</div>`;
+    }
+    h+=`</div><div><button class="btn small" data-act="new-club">+ Agregar club</button></div>`;
+  }
+
+  h+=`<h2 class="sec">Otros gastos</h2>`;
+  if(f.otrosList.length){h+=`<div class="list">`+f.otrosList.map(g=>`<div class="gline"><span class="g-main">${esc(g.concepto)}<span>${dayName(g.fecha||ui.month+'-01')}</span></span><span class="g-r">${clp(g.monto)}<button class="btn small ghost" data-act="del-gasto" data-id="${esc(g.id)}" aria-label="Borrar gasto">${ui.armed===g.id?'¿Borrar?':'×'}</button></span></div>`).join('')+`</div>`}
+  else h+=`<p class="muted" style="margin:0;font-size:13.5px">Sin otros gastos este mes. Anota pelotas, cordajes o transporte con <b>+ Gasto</b>.</p>`;
+
+  const months=[...Array(6)].map((_,i)=>addMonths(ui.month,i-5));
+  const rows=months.map(m=>[m,finMes(m)]);
+  const mc=m=>parse(m+'-01').toLocaleDateString('es-CL',{month:'short',year:'2-digit'}).replace('.','');
+  h+=`<h2 class="sec">Últimos 6 meses</h2><div class="tbl-wrap"><table class="hist"><thead><tr><th>Mes</th><th>Generado</th><th>Costos</th><th>Ganancia</th></tr></thead><tbody>`+
+    rows.map(([m,x])=>`<tr class="${m===ui.month?'cur':''}"><td>${mc(m)}</td><td>${clp(x.gen)}</td><td>${clp(x.canchas+x.otros)}</td><td class="${x.gan<0?'neg':''}">${clp(x.gan)}</td></tr>`).join('')+
+    `</tbody><tfoot><tr><td>Total</td><td>${clp(sum(rows,r=>r[1].gen))}</td><td>${clp(sum(rows,r=>r[1].canchas+r[1].otros))}</td><td>${clp(sum(rows,r=>r[1].gan))}</td></tr></tfoot></table></div>`;
+  return h+`<p class="muted" style="font-size:12.5px;margin:0">"Generado" suma las clases realizadas y las canceladas tarde, aunque el alumno aún no pague. La cancha se cuenta en esas mismas clases, una vez por clase.</p>`;
+}
+
+function vAlumnos(){
+  if(!S.alumnos.length)return `<div class="empty"><strong>Aún no hay alumnos</strong>Agrega el nombre, el valor por clase y si paga a fin de mes o por adelantado.<button class="btn primary" data-act="new-alumno">+ Agregar alumno</button></div>`;
+  const m=today().slice(0,7);const rs=Object.fromEntries(resumenMes(m).map(r=>[r.a.id,r]));
+  let h=`<input id="al-q" class="search" type="search" placeholder="Buscar alumno…" autocomplete="off" value="${esc(ui.alQ||'')}" aria-label="Buscar alumno"><div class="list">`;
+  for(const a of [...S.alumnos].sort((x,y)=>x.nombre.localeCompare(y.nombre))){
+    const r=rs[a.id];const ini=a.nombre.replace(/^Ejemplo:\s*/,'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+    const dn=norm(a.nombre+' '+(a.titular||''));
+    h+=`<div class="row" data-n="${esc(dn)}" ${ui.alQ&&!dn.includes(norm(ui.alQ).trim())?'hidden':''}><button class="student" data-act="edit-alumno" data-id="${esc(a.id)}"><span class="avatar">${esc(ini)}</span>
+      <span class="s-main"><b>${esc(a.nombre)}</b><span>${clp(a.tarifa)} por hora · paga ${esc(a.pago||'fin de mes')}${a.telefono?' · '+esc(a.telefono):''}</span></span>
+      <span class="price">${r?estadoPago(r):''}</span></button></div>`;
+  }
+  return h+`</div>`;
+}
+
+/* ---------- hojas (formularios) ---------- */
+function sheet(html){document.getElementById('modal').innerHTML=`<div class="scrim" data-act="close-scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;const f=document.querySelector('.sheet input,.sheet select');}
+function closeSheet(){if(ui.sheetKind==='cierre')snooze(3600000);ui.sheetKind=null;document.getElementById('modal').innerHTML='';ui.armed=null}
+function cuandoTxt(f){if(f===today())return 'hoy';if(f===addDays(today(),1))return 'mañana';return 'el '+parse(f).toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'})}
+function msgConfirmar(a,c){
+  const nom=String(a.nombre||'').replace(/^Ejemplo:\s*/,'').split(' ')[0];
+  const k=club(c.clubId), firma=cfg().nombre?'\n'+cfg().nombre:'';
+  return `Hola ${nom}! Te escribo para confirmar tu clase de tenis ${cuandoTxt(c.fecha)} a las ${c.hora}${k?' en '+k.nombre.replace(/^Ejemplo:\s*/,''):''}. ¿Me confirmas? 🎾${firma}`;
+}
+function confirmWA(c){
+  const als=(c.alumnoIds||[]).map(alumno).filter(Boolean);if(!als.length)return '';
+  const con=als.filter(a=>waUrl(a.telefono,'x')), sin=als.filter(a=>!waUrl(a.telefono,'x'));
+  return `<div class="field"><span>Confirmar hora por WhatsApp</span>${con.length?`<div class="row-actions">${con.map(a=>`<a class="btn small wa" href="${esc(waUrl(a.telefono,msgConfirmar(a,c)))}" target="_blank" rel="noopener">${esc(String(a.nombre).replace(/^Ejemplo:\s*/,''))}</a>`).join('')}</div>`:''}${sin.length?`<span class="muted" style="font-size:12.5px">${esc(sin.map(a=>a.nombre).join(', '))} sin WhatsApp guardado. Agrégalo en Alumnos.</span>`:''}</div>`;
+}
+function picker(id,selected,txi){
+  const a=alumno(selected);
+  return `<div class="picker"><input type="hidden" id="${id}" value="${esc(a?selected:'')}" ${txi!==undefined?`data-txi="${txi}"`:''}>
+   <input type="search" id="${id}-q" data-pick-q="${id}" placeholder="Escribe el nombre…" autocomplete="off" value="${esc(a?a.nombre:'')}">
+   <div class="pick-list" id="${id}-list" hidden></div></div>`;
+}
+function renderPick(id,q){
+  const L=document.getElementById(id+'-list');if(!L)return;
+  const nq=norm(q).trim();
+  const mesIn=document.getElementById('p-mes');const m=mesIn&&mesIn.value?mesIn.value:ui.month;
+  const deb=Object.fromEntries(resumenMes(m).map(r=>[r.a.id,r.saldo]));
+  const list=S.alumnos.filter(a=>!nq||norm(a.nombre+' '+(a.titular||'')).includes(nq))
+    .sort((x,y)=>(deb[y.id]||0)-(deb[x.id]||0)||x.nombre.localeCompare(y.nombre));
+  L.innerHTML=list.slice(0,8).map(a=>`<button type="button" data-act="pick" data-for="${id}" data-v="${esc(a.id)}"><b>${esc(a.nombre)}</b>${deb[a.id]>0?`<span>Debe ${clp(deb[a.id])}</span>`:''}</button>`).join('')||`<div class="pick-empty">No hay alumnos con ese nombre</div>`;
+  L.hidden=false;
+}
+
+function sheetClase(c){
+  const isNew=!c;
+  c=c||{id:uid(),fecha:defaultFecha(),hora:'18:00',duracion:60,alumnoIds:[],estado:'agendada',nota:'',clubId:(club(ui.lastClub)?ui.lastClub:(S.clubes.length===1?S.clubes[0].id:''))};
+  const checks=S.alumnos.length?[...S.alumnos].sort((x,y)=>(c.alumnoIds.includes(y.id)-c.alumnoIds.includes(x.id))||x.nombre.localeCompare(y.nombre)).map(a=>`<label data-n="${esc(norm(a.nombre+' '+(a.titular||'')))}"><input type="checkbox" name="al" value="${esc(a.id)}" ${c.alumnoIds.includes(a.id)?'checked':''}>${esc(a.nombre)}</label>`).join(''):'<span class="muted">Primero agrega alumnos en la pestaña Alumnos.</span>';
+  sheet(`<h2>${isNew?'Nueva clase':'Clase'}</h2>
+  <form id="f-clase" data-id="${esc(c.id)}" data-new="${isNew}">
+   <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="grid2"><div class="field"><label for="c-fecha">Fecha</label><input id="c-fecha" type="date" value="${c.fecha}" required></div>
+    <div class="field"><label for="c-hora">Hora</label><input id="c-hora" type="time" value="${c.hora}" step="900" required></div></div>
+    <div class="grid2"><div class="field"><label for="c-dur">Duración</label><select id="c-dur">${[60,90,120].map(n=>`<option value="${n}" ${c.duracion==n?'selected':''}>${n} min</option>`).join('')}</select></div>
+    ${isNew?`<div class="field"><label for="c-rep">Repetir</label><select id="c-rep"><option value="1">Solo esta vez</option><option value="4">Semanal, 4 semanas</option><option value="8">Semanal, 8 semanas</option><option value="12">Semanal, 12 semanas</option></select></div>`:`<div class="field"><label for="c-nota">Nota</label><input id="c-nota" value="${esc(c.nota||'')}" placeholder="Cancha 2, revés…"></div>`}</div>
+    ${isNew?`<div class="field"><label for="c-nota">Nota</label><input id="c-nota" value="" placeholder="Cancha 2, trabajar revés…"></div>`:''}
+    ${S.clubes.length?`<div class="field"><label for="c-club">Club / cancha</label><select id="c-club"><option value="">Sin club</option>${S.clubes.map(k=>`<option value="${esc(k.id)}" ${c.clubId===k.id?'selected':''}>${esc(k.nombre)} · ${clp(k.costoHora)}/h</option>`).join('')}</select></div>`:`<input type="hidden" id="c-club" value="">`}
+    <div class="field"><span>Alumnos</span>${S.alumnos.length>=5?`<input id="c-q" type="search" placeholder="Buscar alumno…" autocomplete="off" aria-label="Buscar alumno">`:''}<div class="checks">${checks}</div></div>
+    ${isNew?'':confirmWA(c)}
+    ${isNew?'':`<div class="field"><span>Estado</span><div class="states">${Object.entries(ESTADOS).map(([k,v])=>`<button type="button" data-act="set-estado" data-v="${k}" aria-pressed="${c.estado===k}"><b>${v.t}</b><span>${v.d}</span></button>`).join('')}</div></div>`}
+    <input type="hidden" id="c-estado" value="${c.estado}">
+    <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger${ui.armed===c.id?' armed':''}" data-act="del-clase" data-id="${esc(c.id)}">${ui.armed===c.id?'Toca otra vez para borrar':'Borrar'}</button>`}
+     <div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
+   </div></form>`);
+}
+function sheetAlumno(a){
+  const isNew=!a;a=a||{id:uid(),nombre:'',telefono:'',tarifa:'',pago:'fin de mes',nota:'',link:''};
+  sheet(`<h2>${isNew?'Nuevo alumno':'Alumno'}</h2>
+  <form id="f-alumno" data-id="${esc(a.id)}"><div style="display:flex;flex-direction:column;gap:14px">
+   <div class="field"><label for="a-nombre">Nombre</label><input id="a-nombre" value="${esc(a.nombre)}" required autocomplete="off"></div>
+   <div class="grid2"><div class="field"><label for="a-tel">WhatsApp</label><input id="a-tel" type="tel" value="${esc(a.telefono)}" placeholder="+56 9 …"></div>
+   <div class="field"><label for="a-tarifa">Valor por hora (CLP)</label><input id="a-tarifa" type="number" inputmode="numeric" min="0" step="500" value="${esc(a.tarifa)}" required></div></div>
+   <div class="field"><label for="a-pago">Cómo paga</label><select id="a-pago">${['fin de mes','anticipado'].map(o=>`<option ${a.pago===o?'selected':''}>${o}</option>`).join('')}</select></div>
+   <div class="field"><label for="a-titular">Quién transfiere, si es otra persona (opcional)</label><input id="a-titular" value="${esc(a.titular||'')}" placeholder="Ej. su mamá o papá: María González"></div>
+   <div class="field"><label for="a-link">Link de pago propio (opcional)</label><input id="a-link" type="url" value="${esc(a.link||'')}" placeholder="Si no, se usa el link general de Ajustes"></div>
+   <div class="field"><label for="a-nota">Nota</label><textarea id="a-nota" rows="2" placeholder="Nivel, golpes que trabaja…">${esc(a.nota||'')}</textarea></div>
+   ${!isNew&&waUrl(a.telefono,'x')?`<div><a class="btn small wa" href="${esc(waUrl(a.telefono,'Hola '+String(a.nombre).replace(/^Ejemplo:\s*/,'').split(' ')[0]+'! '))}" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>`:''}
+   <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger${ui.armed===a.id?' armed':''}" data-act="del-alumno" data-id="${esc(a.id)}">${ui.armed===a.id?'Toca otra vez para borrar':'Borrar'}</button>`}
+   <div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
+  </div></form>`);
+}
+function sheetPago(alumnoId){
+  if(!S.alumnos.length){toast('Primero agrega un alumno');return}
+  const r=resumenMes(ui.month).find(x=>x.a.id===alumnoId);
+  sheet(`<h2>Registrar pago</h2><form id="f-pago"><div style="display:flex;flex-direction:column;gap:14px">
+   <div class="field"><label for="p-al-q">Alumno</label>${picker('p-al',alumnoId)}</div>
+   <div class="grid2"><div class="field"><label for="p-monto">Monto (CLP)</label><input id="p-monto" type="number" inputmode="numeric" min="0" step="500" value="${r&&r.saldo>0?r.saldo:''}" required></div>
+   <div class="field"><label for="p-mes">Corresponde al mes</label><input id="p-mes" type="month" value="${ui.month}" required></div></div>
+   <div class="grid2"><div class="field"><label for="p-fecha">Fecha de pago</label><input id="p-fecha" type="date" value="${today()}"></div>
+   <div class="field"><label for="p-medio">Medio</label><select id="p-medio"><option>transferencia</option><option>efectivo</option><option>otro</option></select></div></div>
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar pago</button></div></div>
+  </div></form>`);
+}
+
+/* ---------- cierre del día ---------- */
+const nowHM=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+function finHM(c){const[h,m]=String(c.hora||'00:00').split(':').map(Number);const t=h*60+m+(c.duracion||60);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')}
+function porCerrar(){const t=today(),n=nowHM();return S.clases.filter(c=>c.estado==='agendada'&&(c.fecha<t||(c.fecha===t&&finHM(c)<=n))).sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora))}
+let snoozeMem=0;
+function snoozed(){let v=snoozeMem;try{v=Math.max(v,+localStorage.getItem('tenis-snooze')||0)}catch(_){}return Date.now()<v}
+function snooze(ms){snoozeMem=Date.now()+ms;try{localStorage.setItem('tenis-snooze',String(snoozeMem))}catch(_){}}
+const allLoaded=()=>mode==='local'||(mode==='db'&&Object.values(loaded).every(Boolean));
+function checkCierre(){
+  if(!allLoaded()||document.getElementById('modal').innerHTML||snoozed())return;
+  const p=porCerrar();if(!p.length)return;
+  if(p.some(c=>c.fecha<today())||nowHM()>=(cfg().cierre||'21:00'))sheetCierre();
+}
+let autoDone=false;
+async function maybeAuto(){
+  if(autoDone||!cfg().autoRealizar)return;autoDone=true;
+  const ps=S.clases.filter(c=>c.estado==='agendada'&&c.fecha<today());
+  if(!ps.length)return;
+  for(const c of ps){try{await save('clases',{...c,estado:'realizada',auto:true})}catch(_){return}}
+  toast(ps.length===1?'1 clase de días anteriores quedó como realizada':ps.length+' clases de días anteriores quedaron como realizadas');
+}
+async function afterLoad(){if(!allLoaded())return;await maybeAuto();checkCierre()}
+function sheetCierre(){
+  const p=porCerrar();if(!p.length){toast('No hay clases por confirmar');return}
+  ui.cierre=ui.cierre||{};p.forEach(c=>{if(!ui.cierre[c.id])ui.cierre[c.id]='realizada'});
+  const ops=[['realizada','Realizada'],['cobrada','Canceló tarde'],['cancelada','Canceló con aviso'],['lluvia','Lluvia']];
+  sheet(`<h2>¿Realizaste todas las clases?</h2><p class="muted" style="margin:0;font-size:13.5px">Todas vienen marcadas como realizadas. Cambia solo las que no se hicieron y guarda.</p>
+  ${p.map(c=>`<div class="cierre-item"><div class="ci-top"><b>${esc(c.hora)}</b><span>${esc(nombres(c).join(', ')||'Sin alumno')}</span></div><span class="muted" style="font-size:12.5px">${dayName(c.fecha)}${club(c.clubId)?' · '+esc(club(c.clubId).nombre):''}</span>
+  <div class="opts" role="group" aria-label="Estado">${ops.map(([k,t])=>`<button type="button" data-act="cierre-set" data-id="${esc(c.id)}" data-v="${k}" aria-pressed="${ui.cierre[c.id]===k}">${t}</button>`).join('')}</div></div>`).join('')}
+  <div class="sheet-actions"><button type="button" class="btn ghost" data-act="cierre-later">Recordarme en 1 hora</button><div class="end"><button type="button" class="btn primary" data-act="cierre-ok">Guardar ${p.length===1?'clase':p.length+' clases'}</button></div></div>`);
+  ui.sheetKind='cierre';
+}
+
+/* ---------- transferencias desde Gmail ---------- */
+const TX_Q='("transferencia recibida" OR "has recibido una transferencia" OR "te han transferido" OR "recibiste una transferencia" OR "aviso de transferencia" OR "transferencia de fondos") -from:wetransfer.com -from:swisstransfer.com newer_than:45d';
+const norm=s=>String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+function parseMonto(t){
+  const s=String(t||'');
+  const m=s.match(/\$\s?(\d{1,3}(?:\.\d{3})+|\d{4,})/)||s.match(/monto[^\d$]{0,20}\$?\s?(\d{1,3}(?:\.\d{3})+|\d{4,})/i)||s.match(/clp\s?(\d{1,3}(?:\.\d{3})+|\d{4,})/i);
+  return m?+m[1].replace(/\./g,''):0;
+}
+function nameHit(a,text){
+  const t=norm(text);
+  const tit=norm(a.titular).split(/\s+/).filter(w=>w.length>=3);
+  if(tit.length&&tit.every(w=>t.includes(w)))return true;
+  const nm=norm(String(a.nombre||'').replace(/^Ejemplo:\s*/,'')).replace(/[^a-z\s]/g,' ').split(/\s+/).filter(w=>w.length>=3);
+  const hits=nm.filter(w=>t.includes(w)).length;
+  return nm.length>=2?hits>=2:(nm.length===1&&hits===1);
+}
+function sugerir(text,monto){
+  let best=null;
+  for(const a of S.alumnos){
+    const nh=nameHit(a,text);
+    const meses=[...new Set(S.clases.filter(c=>(c.alumnoIds||[]).includes(a.id)).map(c=>c.fecha.slice(0,7)))].sort().reverse();
+    const mesMatch=monto?meses.find(m=>{const r=resumenMes(m).find(x=>x.a.id===a.id);return r&&r.saldo>0&&r.saldo===monto}):undefined;
+    const score=(nh?2:0)+(mesMatch?1:0);
+    if(score>0&&(!best||score>best.score))best={a,score,nh,mesMatch};
+  }
+  return best;
+}
+async function scanTx(){
+  ui.tx={loading:true};renderTx();
+  let mcp=null;
+  try{mcp=window.claude?await window.claude.use('mcp'):null}catch(_){mcp=null}
+  if(!mcp){ui.tx={error:'nomcp'};renderTx();return}
+  try{
+    const res=await mcp.callTool('Gmail','search_threads',{query:cfg().gmailQuery||TX_Q,pageSize:25},{cache:false});
+    const th=(res&&res.payload&&res.payload.threads)||[];
+    const done=new Set(S.transferencias.map(x=>x.id));
+    const msgs=th.flatMap(t=>(t.messages||[]).map(m=>({...m,threadId:m.threadId||t.id}))).filter(m=>m.id&&!done.has(m.id));
+    let fetched=0;const items=[];
+    for(const m of msgs){
+      let text=(m.subject||'')+' '+(m.snippet||''), monto=parseMonto(text);
+      if((!monto||!(sugerir(text,monto)||{}).nh)&&fetched<8){
+        fetched++;
+        try{
+          const r=await mcp.callTool('Gmail','get_thread',{threadId:m.threadId,messageFormat:'PLAIN_TEXT'},{cache:false});
+          const ms=(r&&r.payload&&r.payload.messages)||[];
+          const mm=ms.find(x=>x.id===m.id)||ms[0];
+          const body=mm?(mm.plaintextBody||mm.plaintext_body||mm.snippet||''):'';
+          if(body){text+=' '+body;if(!monto)monto=parseMonto(body)}
+        }catch(_){}
+      }
+      if(!monto)continue;
+      const s=sugerir(text,monto);
+      const fecha=m.date?iso(new Date(m.date)):today();
+      items.push({id:m.id,fecha,monto,resumen:((m.subject||'')+' · '+(m.snippet||'')).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&'),
+        alumnoId:s?s.a.id:'',mes:(s&&s.mesMatch)||fecha.slice(0,7),nh:!!(s&&s.nh),mm:!!(s&&s.mesMatch),url:m.viewUrl||''});
+    }
+    ui.tx={items};
+  }catch(e){ui.tx={error:(e&&e.code)||'upstream_error'}}
+  renderTx();
+}
+function txErr(c){
+  return ({
+    nomcp:'Esta función se activa al abrir la página dentro de Claude, con tu Gmail conectado.',
+    server_not_connected:'Gmail no está conectado. Agrégalo en claude.ai, en Ajustes → Conectores, y vuelve a intentarlo.',
+    needs_reauth:'Tu conexión con Gmail venció. Vuelve a conectarla en claude.ai, en Ajustes → Conectores.',
+    selection_required:'Tienes más de una cuenta de Gmail conectada. Elige cuál usar en el aviso de Claude y vuelve a intentarlo.',
+    not_in_manifest:'La página necesita tu permiso para leer Gmail. Toca "Intentar de nuevo" y permite el acceso.',
+    approval_required:'La página necesita tu permiso para leer Gmail. Toca "Intentar de nuevo" y permite el acceso.',
+    consent_required:'La página necesita tu permiso para leer Gmail. Toca "Intentar de nuevo" y permite el acceso.',
+    blocked_by_policy:'Tu organización no permite leer Gmail desde esta página.',
+    server_unavailable:'Gmail no respondió. Intenta de nuevo en un momento.'
+  })[c]||'No se pudo leer Gmail. Intenta de nuevo en un momento.';
+}
+function renderTx(){
+  const t=ui.tx||{};let h=`<h2>Transferencias en Gmail</h2>`;
+  if(t.loading)h+=`<p class="muted" style="margin:0">Buscando avisos de transferencia en tu Gmail…</p>`;
+  else if(t.error)h+=`<div class="note">${txErr(t.error)}</div>${['not_in_manifest','approval_required','consent_required','server_unavailable','upstream_error','selection_required'].includes(t.error)?'<div><button class="btn small primary" data-act="scan-tx">Intentar de nuevo</button></div>':''}`;
+  else if(!t.items.length)h+=`<p class="muted" style="margin:0">No hay transferencias nuevas por revisar de los últimos 45 días. Si tu banco usa otras palabras en el asunto, ajusta la búsqueda en Ajustes.</p>`;
+  else{
+    h+=`<p class="muted" style="margin:0;font-size:13px">Confirma a qué alumno y mes corresponde cada una. Nada se registra sin tu confirmación.</p>`;
+    h+=t.items.map((x,i)=>`<div class="tx"><div class="tx-top"><b>${clp(x.monto)}</b><span class="muted">${dayName(x.fecha)}</span>${x.nh?'<span class="chip aldia">Coincide el nombre</span>':''}${x.mm?'<span class="chip aldia">Coincide con lo que debe</span>':''}</div>
+      <div class="tx-txt">${esc(x.resumen.slice(0,170))}${x.url?` <a href="${esc(x.url)}" target="_blank" rel="noopener">Ver correo</a>`:''}</div>
+      <div class="grid2"><div class="field"><label for="tx-al-${i}-q">Alumno</label>${picker('tx-al-'+i,x.alumnoId,i)}</div>
+      <div class="field"><label for="tx-mes-${i}">Mes que paga</label><input id="tx-mes-${i}" type="month" data-txi="${i}" data-k="mes" value="${x.mes}"></div></div>
+      <div class="row-actions"><button class="btn small primary" data-act="tx-ok" data-i="${i}">Registrar pago</button><button class="btn small ghost" data-act="tx-skip" data-i="${i}">No es de un alumno</button></div></div>`).join('');
+  }
+  h+=`<div class="sheet-actions"><div class="end"><button class="btn ghost" data-act="close">Cerrar</button></div></div>`;
+  sheet(h);
+}
+
+function sheetClub(k){
+  const isNew=!k;k=k||{id:uid(),nombre:'',costoHora:'',nota:''};
+  sheet(`<h2>${isNew?'Nuevo club':'Club'}</h2><form id="f-club" data-id="${esc(k.id)}"><div style="display:flex;flex-direction:column;gap:14px">
+   <div class="field"><label for="k-nombre">Nombre del club</label><input id="k-nombre" value="${esc(k.nombre)}" required autocomplete="off"></div>
+   <div class="field"><label for="k-costo">Costo de cancha por hora (CLP)</label><input id="k-costo" type="number" inputmode="numeric" min="0" step="500" value="${esc(k.costoHora)}" required></div>
+   <div class="field"><label for="k-nota">Cómo se paga</label><input id="k-nota" value="${esc(k.nota||'')}" placeholder="Fin de mes por transferencia, al reservar…"></div>
+   <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger" data-act="del-club" data-id="${esc(k.id)}">Borrar</button>`}
+   <div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
+  </div></form>`);
+}
+function sheetGasto(tipo,clubId){
+  tipo=tipo==='club'?'club':'otro';
+  if(tipo==='club'&&!club(clubId))clubId=S.clubes[0]?.id||'';
+  const pre=tipo==='club'&&clubId?Math.max(clubMes(clubId,ui.month).saldo,0):0;
+  sheet(`<h2>${tipo==='club'?'Pago a club':'Nuevo gasto'}</h2><form id="f-gasto"><div style="display:flex;flex-direction:column;gap:14px">
+   <div class="field"><label for="x-tipo">Tipo</label><select id="x-tipo"><option value="club" ${tipo==='club'?'selected':''}>Pago de canchas a un club</option><option value="otro" ${tipo==='otro'?'selected':''}>Otro gasto (pelotas, cordaje, transporte…)</option></select></div>
+   <div class="field" id="x-club-f" ${tipo==='club'?'':'hidden'}><label for="x-club">Club</label><select id="x-club">${S.clubes.length?S.clubes.map(k=>`<option value="${esc(k.id)}" ${k.id===clubId?'selected':''}>${esc(k.nombre)}</option>`).join(''):'<option value="">Primero agrega un club</option>'}</select></div>
+   <div class="field" id="x-con-f" ${tipo==='otro'?'':'hidden'}><label for="x-con">Concepto</label><input id="x-con" placeholder="Tubos de pelotas"></div>
+   <div class="grid2"><div class="field"><label for="x-monto">Monto (CLP)</label><input id="x-monto" type="number" inputmode="numeric" min="0" step="10" value="${pre||''}" required></div>
+   <div class="field"><label for="x-mes">Corresponde al mes</label><input id="x-mes" type="month" value="${ui.month}" required></div></div>
+   <div class="field"><label for="x-fecha">Fecha</label><input id="x-fecha" type="date" value="${today()}"></div>
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
+  </div></form>`);
+}
+
+function resumenTexto(id){
+  const r=resumenMes(ui.month).find(x=>x.a.id===id);if(!r)return '';
+  const nom=r.a.nombre.replace(/^Ejemplo:\s*/,'').split(' ')[0];
+  const fechas=r.cobr.map(c=>parse(c.fecha).getDate()+(c.estado==='cobrada'?' (canceló tarde)':'')).join(', ');
+  let t=`Hola ${nom}! Te dejo el resumen de tus clases de tenis de ${monthName(ui.month)}:\n• ${r.cobr.length} ${r.cobr.length===1?'clase':'clases'}${fechas?' (días '+fechas+')':''}\n• Total: ${clp(r.monto)}`;
+  if(r.pagado)t+=`\n• Pagado: ${clp(r.pagado)}`;
+  t+=r.saldo>0?`\n• Saldo pendiente: ${clp(r.saldo)}`:r.saldo<0?`\n• Saldo a favor: ${clp(-r.saldo)}`:`\n• Estás al día ✅`;
+  const g=cfg();
+  if(r.saldo>0){const link=r.a.link||g.link;
+    if(link)t+=`\n\nPuedes pagar aquí: ${link}`;
+    if(g.transf)t+=`\n\n${link?'O por transferencia':'Datos para transferir'}:\n${g.transf}`;}
+  return t+`\n\n¡Gracias! 🎾${g.nombre?'\n'+g.nombre:''}`;
+}
+function sheetConfig(){
+  const c=cfg();
+  sheet(`<h2>Ajustes de cobro</h2><form id="f-config"><div style="display:flex;flex-direction:column;gap:14px">
+   <div class="field"><label for="g-nombre">Tu nombre (firma de los mensajes)</label><input id="g-nombre" value="${esc(c.nombre||'')}" placeholder="Profe Diego" autocomplete="off"></div>
+   <div class="field"><label for="g-link">Link de pago</label><input id="g-link" type="url" value="${esc(c.link||'')}" placeholder="https://link.mercadopago.cl/…"></div>
+   <p class="muted" style="margin:0;font-size:13px">Pega el link que te da Mercado Pago, Flow, Khipu o tu banco. Se agrega al mensaje de cobro de cada alumno que tenga saldo pendiente.</p>
+   <div class="field"><label for="g-transf">Datos de transferencia</label><textarea id="g-transf" rows="5" placeholder="Nombre&#10;RUT&#10;Banco, tipo y número de cuenta&#10;Mail">${esc(c.transf||'')}</textarea></div>
+   <div class="field"><label for="g-query">Búsqueda de transferencias en Gmail</label><textarea id="g-query" rows="3">${esc(c.gmailQuery||TX_Q)}</textarea></div>
+   <p class="muted" style="margin:0;font-size:13px">Así se buscan los avisos de tu banco. Si tu banco usa otro asunto, agrégalo aquí, por ejemplo <b>from:avisos@tubanco.cl</b>.</p>
+   <div class="field"><label for="g-cierre">Hora para preguntarte si hiciste las clases</label><input id="g-cierre" type="time" value="${esc(c.cierre||'21:00')}"></div>
+   <label class="check-row"><input type="checkbox" id="g-auto" ${c.autoRealizar?'checked':''}><span>Si no respondo, dar por realizadas las clases de días anteriores. Puedo corregirlas después.</span></label>
+   ${cloud&&user?`<div class="field"><span>Cuenta</span><div class="acct">${esc(user.email||'Sesión iniciada')}</div><span class="muted" style="font-size:12.5px">Tus datos se guardan en tu cuenta y quedan disponibles en todos tus dispositivos. También queda una copia en este teléfono para usar la app sin internet.</span><div class="row-actions"><button type="button" class="btn small danger" data-act="del-logout">Cerrar sesión</button></div></div>`:''}
+   ${mode==='local'?`<div class="field"><span>${cloud?'Respaldo de tus datos':'Tus datos en este teléfono'}</span><div class="row-actions"><button type="button" class="btn small" data-act="backup">Descargar respaldo</button><label class="btn small" for="g-restore" style="cursor:pointer">Restaurar respaldo</label><input type="file" id="g-restore" accept="application/json,.json" hidden><button type="button" class="btn small danger" data-act="del-local">Empezar de cero</button></div><span class="muted" style="font-size:12.5px">${cloud?'Puedes descargar una copia de tus datos cuando quieras. Empezar de cero borra todo, también en tu cuenta.':'Los datos se guardan solo en este teléfono. Descarga un respaldo cada cierto tiempo.'}</span></div>`:''}
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
+  </div></form>`);
+}
+
+/* ---------- eventos ---------- */
+document.addEventListener('click',async e=>{
+  document.querySelectorAll('.pick-list').forEach(L=>{if(!L.hidden&&!L.parentElement.contains(e.target))L.hidden=true});
+  const b=e.target.closest('[data-act],[data-tab]');if(!b)return;
+  if(b.dataset.tab){ui.tab=b.dataset.tab;ui.open=null;try{localStorage.setItem('tenis-tab',ui.tab)}catch(_){}render();window.scrollTo(0,0);return}
+  const act=b.dataset.act,id=b.dataset.id;
+  if(act==='close-scrim'){if(e.target===b)closeSheet();return}
+  if(!act.startsWith('del-'))ui.armed=null;
+  switch(act){
+    case 'wk':ui.week=addDays(ui.week,+b.dataset.n);render();break;
+    case 'wk-today':ui.week=mondayOf(today());render();break;
+    case 'config':sheetConfig();break;
+    case 'del-logout':logout(b);break;
+    case 'sub-refresh':if(user&&sb){showAuth('loading','Verificando…');sb.auth.getSession().then(r=>r.data.session?loadForUser(r.data.session.user):(resetUser(),showAuth('form'))).catch(()=>showAuth('blocked'))}break;
+    case 'sb-retry':if(user&&sb){showAuth('loading','Cargando tu agenda…');sb.auth.getSession().then(r=>r.data.session?loadForUser(r.data.session.user):(resetUser(),showAuth('form'))).catch(()=>showAuth('load-error','No hay conexión con tu cuenta. Revisa tu internet e intenta de nuevo.','bad'))}else startCloud();break;
+    case 'sb-google':{b.disabled=true;try{await ensureClient();const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname}});if(error)throw error}catch(err){showAuth('form',authErrText(err),'bad')}break}
+    case 'mig-phone':if(mig)finishMig(mig.local,true);break;
+    case 'mig-cloud':if(mig)finishMig(mig.remote,false);break;
+    case 'mig-empty':if(mig)finishMig({},false);break;
+    case 'scan-tx':scanTx();break;
+    case 'backup':{const blob=new Blob([JSON.stringify({app:'agenda-tenis',v:1,fecha:today(),...S},null,1)],{type:'application/json'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download='agenda-tenis-respaldo-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);toast('Respaldo descargado');break}
+    case 'del-local':{if(ui.armed!=='reset'){ui.armed='reset';b.textContent='Toca otra vez: se borra todo';b.classList.add('armed');return}
+      ui.armed=null;for(const k of Object.keys(S))S[k]=[];persistLocal();closeSheet();render();toast('Listo, partes de cero');break}
+    case 'pick':{
+      const fid=b.dataset.for, hid=document.getElementById(fid), q=document.getElementById(fid+'-q');
+      hid.value=b.dataset.v;q.value=alumno(b.dataset.v)?.nombre||'';document.getElementById(fid+'-list').hidden=true;
+      if(hid.dataset.txi!==undefined&&ui.tx&&ui.tx.items){const it=ui.tx.items[+hid.dataset.txi];if(it)it.alumnoId=b.dataset.v}
+      if(fid==='p-al'){const r=resumenMes(document.getElementById('p-mes').value).find(x=>x.a.id===b.dataset.v);if(r&&r.saldo>0)document.getElementById('p-monto').value=r.saldo}
+      break}
+    case 'open-cierre':ui.sheetKind=null;sheetCierre();break;
+    case 'cierre-set':ui.cierre[id]=b.dataset.v;b.parentElement.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));break;
+    case 'cierre-later':closeSheet();toast('Te pregunto de nuevo en una hora');break;
+    case 'cierre-ok':{
+      const p=porCerrar(), sel=ui.cierre||{};ui.sheetKind=null;closeSheet();
+      for(const c of p){try{await save('clases',{...c,estado:sel[c.id]||'realizada'})}catch(_){break}}
+      ui.cierre={};toast(p.length===1?'Clase guardada':p.length+' clases guardadas');break}
+    case 'tx-ok':case 'tx-skip':{
+      const i=+b.dataset.i, x=ui.tx&&ui.tx.items&&ui.tx.items[i];if(!x)break;
+      if(act==='tx-ok'){
+        if(!alumno(x.alumnoId)){toast('Elige a qué alumno corresponde');break}
+        if(!x.mes){toast('Elige el mes');break}
+        try{
+          await save('pagos',{id:'tx-'+x.id,alumnoId:x.alumnoId,mes:x.mes,monto:x.monto,fecha:x.fecha,medio:'transferencia',gmailId:x.id});
+          await save('transferencias',{id:x.id,estado:'asignado',pagoId:'tx-'+x.id,monto:x.monto,fecha:x.fecha});
+        }catch(_){break}
+        toast('Pago registrado');
+      }else{
+        try{await save('transferencias',{id:x.id,estado:'ignorado',monto:x.monto,fecha:x.fecha})}catch(_){break}
+        toast('No se volverá a mostrar');
+      }
+      ui.tx.items.splice(i,1);renderTx();break}
+    case 'toggle-club':ui.openClub=ui.openClub===id?null:id;render();break;
+    case 'new-club':sheetClub();break;
+    case 'edit-club':sheetClub(club(id));break;
+    case 'new-gasto':sheetGasto(b.dataset.tipo,id);break;
+    case 'agview':ui.agView=b.dataset.v;try{localStorage.setItem('tenis-agview',ui.agView)}catch(_){}
+      if(ui.agView==='mes'){ui.calMonth=ui.week.slice(0,7);if(!ui.selDay.startsWith(ui.calMonth))ui.selDay=ui.week}else{ui.week=mondayOf(ui.selDay)}
+      render();break;
+    case 'cal':ui.calMonth=addMonths(ui.calMonth,+b.dataset.n);render();break;
+    case 'cal-today':ui.calMonth=today().slice(0,7);ui.selDay=today();render();break;
+    case 'pick-day':ui.selDay=b.dataset.d;ui.calMonth=ui.selDay.slice(0,7);render();break;
+    case 'mo':ui.month=addMonths(ui.month,+b.dataset.n);ui.open=null;render();break;
+    case 'toggle':ui.open=ui.open===id?null:id;render();break;
+    case 'close':closeSheet();break;
+    case 'new-alumno':sheetAlumno();break;
+    case 'edit-alumno':sheetAlumno(alumno(id));break;
+    case 'edit-clase':sheetClase(S.clases.find(c=>c.id===id));break;
+    case 'new-pago':sheetPago(id);break;
+    case 'set-estado':document.getElementById('c-estado').value=b.dataset.v;document.querySelectorAll('.states button').forEach(x=>x.setAttribute('aria-pressed',x===b));break;
+    case 'mark-all':{const ps=S.clases.filter(c=>c.estado==='agendada'&&c.fecha<today());for(const c of ps){await save('clases',{...c,estado:'realizada'})}toast(ps.length+' marcadas como realizadas');break}
+    case 'copy':{const t=resumenTexto(id);try{await navigator.clipboard.writeText(t);toast('Resumen copiado, pégalo en WhatsApp')}catch(_){sheet(`<h2>Resumen</h2><textarea id="copy-txt" rows="9" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg)">${esc(t)}</textarea><div class="sheet-actions"><span class="muted" style="font-size:13px">Mantén presionado para copiar</span><div class="end"><button class="btn primary" data-act="close">Listo</button></div></div>`);const ta=document.getElementById('copy-txt');ta.focus();ta.select()}break}
+    case 'del-clase':case 'del-alumno':case 'del-pago':case 'del-club':case 'del-gasto':{
+      if(ui.armed!==id){ui.armed=id;
+        if(act==='del-pago'||act==='del-gasto'){render()}else{b.classList.add('armed');b.textContent='Toca otra vez para borrar'}
+        return}
+      ui.armed=null;
+      if(act==='del-club'){closeSheet();await removeDoc('clubes',id);toast('Club borrado')}
+      if(act==='del-gasto'){await removeDoc('gastos',id);toast('Gasto borrado')}
+      if(act==='del-clase'){closeSheet();await removeDoc('clases',id);toast('Clase borrada')}
+      if(act==='del-alumno'){closeSheet();await removeDoc('alumnos',id);toast('Alumno borrado')}
+      if(act==='del-pago'){await removeDoc('pagos',id);toast('Pago borrado')}
+      break}
+  }
+});
+document.getElementById('fab').addEventListener('click',()=>{ui.armed=null;ui.tab==='alumnos'?sheetAlumno():ui.tab==='cobros'?sheetPago(ui.open):ui.tab==='finanzas'?sheetGasto(ui.openClub?'club':'otro',ui.openClub):sheetClase()});
+document.addEventListener('change',e=>{
+  if(e.target.id==='g-restore'&&e.target.files&&e.target.files[0]){const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||d.app!=='agenda-tenis')throw 0;for(const k of Object.keys(S))S[k]=Array.isArray(d[k])?d[k]:[];persistLocal();closeSheet();render();toast('Respaldo restaurado')}catch(_){toast('Ese archivo no es un respaldo de la agenda')}};r.readAsText(e.target.files[0])}
+  if(e.target.dataset&&e.target.dataset.txi!==undefined&&ui.tx&&ui.tx.items){const it=ui.tx.items[+e.target.dataset.txi];if(it)it[e.target.dataset.k]=e.target.value}
+  if(e.target.id==='x-tipo'){const t=e.target.value;document.getElementById('x-club-f').hidden=t!=='club';document.getElementById('x-con-f').hidden=t!=='otro';document.querySelector('.sheet h2').textContent=t==='club'?'Pago a club':'Nuevo gasto'}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.pickQ){
+    const id=t.dataset.pickQ, hid=document.getElementById(id);
+    if(hid){hid.value='';if(hid.dataset.txi!==undefined&&ui.tx&&ui.tx.items){const it=ui.tx.items[+hid.dataset.txi];if(it)it.alumnoId=''}}
+    renderPick(id,t.value);
+  }
+  if(t.id==='c-q'){const q=norm(t.value).trim();document.querySelectorAll('.checks label').forEach(l=>{const cb=l.querySelector('input');l.hidden=!!q&&!cb.checked&&!l.dataset.n.includes(q)})}
+  if(t.id==='al-q'){ui.alQ=t.value;const q=norm(t.value).trim();document.querySelectorAll('.row[data-n]').forEach(r=>r.hidden=!!q&&!r.dataset.n.includes(q))}
+});
+document.addEventListener('focusin',e=>{const t=e.target;if(t.dataset&&t.dataset.pickQ){t.select();renderPick(t.dataset.pickQ,'')}});
+setInterval(checkCierre,60000);
+document.addEventListener('submit',async e=>{
+  if(e.target.id==='f-login'){
+    e.preventDefault();const f=e.target,inp=document.getElementById('l-email'),email=inp.value.trim(),btn=f.querySelector('[type=submit]');
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showAuth('form','Escribe un correo válido, por ejemplo nombre@correo.com.','bad');document.getElementById('l-email').value=email;return}
+    btn.disabled=true;btn.textContent='Enviando…';
+    try{await ensureClient();const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});if(error)throw error;
+      showAuth('form',`Revisa tu correo: te enviamos un enlace a <b>${esc(email)}</b>. Ábrelo en este teléfono para entrar. Si no aparece en unos minutos, mira en Spam o Promociones.`,'ok');
+    }catch(err){showAuth('form',authErrText(err),'bad')}
+    document.getElementById('l-email').value=email;return;
+  }
+  e.preventDefault();const f=e.target;const v=id=>document.getElementById(id)?.value;
+  try{
+  if(f.id==='f-clase'){
+    const ids=[...f.querySelectorAll('input[name="al"]:checked')].map(x=>x.value);
+    if(!ids.length){toast('Elige al menos un alumno');return}
+    const base={fecha:v('c-fecha'),hora:v('c-hora'),duracion:+v('c-dur'),alumnoIds:ids,estado:v('c-estado'),nota:v('c-nota')||'',clubId:v('c-club')||''};
+    ui.lastClub=base.clubId;
+    if(f.dataset.new==='true'){
+      const n=+v('c-rep')||1;closeSheet();
+      for(let i=0;i<n;i++)await save('clases',{...base,id:uid(),fecha:addDays(base.fecha,7*i),estado:'agendada'});
+      toast(n>1?`${n} clases agendadas`:'Clase agendada');
+    }else{closeSheet();await save('clases',{...base,id:f.dataset.id});toast('Clase guardada')}
+  }
+  if(f.id==='f-alumno'){
+    const a={id:f.dataset.id,nombre:v('a-nombre').trim(),telefono:v('a-tel').trim(),tarifa:+v('a-tarifa')||0,pago:v('a-pago'),nota:v('a-nota'),link:(v('a-link')||'').trim(),titular:(v('a-titular')||'').trim()};
+    closeSheet();await save('alumnos',a);toast('Alumno guardado');
+  }
+  if(f.id==='f-club'){
+    const k={id:f.dataset.id,nombre:v('k-nombre').trim(),costoHora:+v('k-costo')||0,nota:v('k-nota').trim()};
+    closeSheet();await save('clubes',k);toast('Club guardado');
+  }
+  if(f.id==='f-gasto'){
+    const tipo=v('x-tipo');const kid=tipo==='club'?v('x-club'):'';
+    if(tipo==='club'&&!club(kid)){toast('Primero agrega un club');return}
+    const g={id:uid(),tipo,clubId:kid,concepto:tipo==='club'?'Canchas '+club(kid).nombre:(v('x-con').trim()||'Gasto'),monto:+v('x-monto')||0,mes:v('x-mes'),fecha:v('x-fecha')||today()};
+    closeSheet();await save('gastos',g);ui.month=g.mes;render();toast(tipo==='club'?'Pago al club registrado':'Gasto registrado');
+  }
+  if(f.id==='f-config'){
+    const c={id:'perfil',nombre:v('g-nombre').trim(),link:v('g-link').trim(),transf:v('g-transf').trim(),gmailQuery:(v('g-query')||'').trim(),cierre:v('g-cierre')||'21:00',autoRealizar:!!(document.getElementById('g-auto')||{}).checked};
+    autoDone=false;
+    closeSheet();await save('config',c);toast('Ajustes guardados');
+  }
+  if(f.id==='f-pago'){
+    if(!alumno(v('p-al'))){toast('Elige un alumno de la lista');return}
+    const p={id:uid(),alumnoId:v('p-al'),monto:+v('p-monto')||0,mes:v('p-mes'),fecha:v('p-fecha')||today(),medio:v('p-medio')};
+    closeSheet();await save('pagos',p);ui.month=p.mes;ui.open=p.alumnoId;render();toast('Pago registrado');
+  }
+  }catch(_){}
+});
+init();
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}))}</script>
+</body>
+</html>
