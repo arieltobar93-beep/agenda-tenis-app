@@ -270,8 +270,8 @@ table.hist .neg{color:var(--bad)}
 
 <script>
 (function(){
-const S={alumnos:[],clases:[],pagos:[],config:[],clubes:[],gastos:[],transferencias:[]};
-const loaded={alumnos:false,clases:false,pagos:false,config:false,clubes:false,gastos:false,transferencias:false};
+const S={alumnos:[],clases:[],pagos:[],config:[],clubes:[],gastos:[],transferencias:[],evals:[],videos:[]};
+const loaded={alumnos:false,clases:false,pagos:false,config:false,clubes:false,gastos:false,transferencias:false,evals:true,videos:true};
 let db=null, mode='loading';
 const ui={tab:'agenda',week:mondayOf(today()),month:today().slice(0,7),open:null,armed:null,agView:'lista',calMonth:today().slice(0,7),selDay:today()};
 try{const t=localStorage.getItem('tenis-tab');if(t)ui.tab=t;const v=localStorage.getItem('tenis-agview');if(v)ui.agView=v;}catch(e){}
@@ -352,7 +352,7 @@ async function init(){
   }else{
     mode='local';
     let data=null;try{data=JSON.parse(localStorage.getItem('tenis-local')||'null')}catch(e){}
-    Object.assign(S,data||demo());S.config=S.config||[];S.clubes=S.clubes||[];S.gastos=S.gastos||[];S.transferencias=S.transferencias||[];loaded.transferencias=true;render();afterLoad();
+    Object.assign(S,data||demo());S.config=S.config||[];S.clubes=S.clubes||[];S.gastos=S.gastos||[];S.transferencias=S.transferencias||[];S.evals=S.evals||[];S.videos=S.videos||[];loaded.transferencias=true;render();afterLoad();
   }
 }
 
@@ -593,6 +593,8 @@ function render(){
   fab.textContent=ui.tab==='alumnos'?'+ Alumno':ui.tab==='cobros'?'+ Pago':ui.tab==='finanzas'?'+ Gasto':'+ Clase';
   const v=document.getElementById('view');
   if(mode==='loading'||(mode==='db'&&!Object.values(loaded).every(Boolean))){v.innerHTML='<div class="empty">Cargando agenda…</div>';return}
+  fab.hidden=!!(ui.perfil&&window.TAX&&alumno(ui.perfil));
+  if(ui.perfil&&window.TAX&&alumno(ui.perfil)){v.innerHTML=window.TAX.vPerfil(ui.perfil);if(window.TAX.after)window.TAX.after();return}
   v.innerHTML=ui.tab==='agenda'?vAgenda():ui.tab==='cobros'?vCobros():ui.tab==='finanzas'?vFinanzas():vAlumnos();
 }
 
@@ -774,7 +776,7 @@ function vAlumnos(){
   for(const a of [...S.alumnos].sort((x,y)=>x.nombre.localeCompare(y.nombre))){
     const r=rs[a.id];const ini=a.nombre.replace(/^Ejemplo:\s*/,'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const dn=norm(a.nombre+' '+(a.titular||''));
-    h+=`<div class="row" data-n="${esc(dn)}" ${ui.alQ&&!dn.includes(norm(ui.alQ).trim())?'hidden':''}><button class="student" data-act="edit-alumno" data-id="${esc(a.id)}"><span class="avatar">${esc(ini)}</span>
+    h+=`<div class="row" data-n="${esc(dn)}" ${ui.alQ&&!dn.includes(norm(ui.alQ).trim())?'hidden':''}><button class="student" data-act="open-perfil" data-id="${esc(a.id)}"><span class="avatar">${esc(ini)}</span>
       <span class="s-main"><b>${esc(a.nombre)}</b><span>${clp(a.tarifa)} por hora · paga ${esc(a.pago||'fin de mes')}${a.telefono?' · '+esc(a.telefono):''}</span></span>
       <span class="price">${r?estadoPago(r):''}</span></button></div>`;
   }
@@ -843,6 +845,11 @@ function sheetAlumno(a){
    <div class="field"><label for="a-pago">Cómo paga</label><select id="a-pago">${['fin de mes','anticipado'].map(o=>`<option ${a.pago===o?'selected':''}>${o}</option>`).join('')}</select></div>
    <div class="field"><label for="a-titular">Quién transfiere, si es otra persona (opcional)</label><input id="a-titular" value="${esc(a.titular||'')}" placeholder="Ej. su mamá o papá: María González"></div>
    <div class="field"><label for="a-link">Link de pago propio (opcional)</label><input id="a-link" type="url" value="${esc(a.link||'')}" placeholder="Si no, se usa el link general de Ajustes"></div>
+   <div class="grid2"><div class="field"><label for="a-mano">Mano dominante</label><select id="a-mano">${['','diestro','zurdo'].map(o=>`<option value="${o}" ${(a.mano||'')===o?'selected':''}>${o||'Sin definir'}</option>`).join('')}</select></div>
+   <div class="field"><label for="a-reves">Revés</label><select id="a-reves">${['','a una mano','a dos manos'].map(o=>`<option value="${o}" ${(a.reves||'')===o?'selected':''}>${o||'Sin definir'}</option>`).join('')}</select></div></div>
+   <div class="field"><label for="a-nivel">Nivel</label><select id="a-nivel">${['','Principiante','Intermedio','Avanzado','Competencia'].map(o=>`<option value="${o}" ${(a.nivel||'')===o?'selected':''}>${o||'Sin definir'}</option>`).join('')}</select></div>
+   <div class="field"><label for="a-obj">Objetivo del alumno</label><textarea id="a-obj" rows="2" placeholder="Ej. competir en torneos, mejorar el saque, pasarlo bien…">${esc(a.objetivo||'')}</textarea></div>
+   <div class="field"><label for="a-salud">Lesiones o cuidados</label><input id="a-salud" value="${esc(a.salud||'')}" placeholder="Ej. codo sensible, rodilla operada"></div>
    <div class="field"><label for="a-nota">Nota</label><textarea id="a-nota" rows="2" placeholder="Nivel, golpes que trabaja…">${esc(a.nota||'')}</textarea></div>
    ${!isNew&&waUrl(a.telefono,'x')?`<div><a class="btn small wa" href="${esc(waUrl(a.telefono,'Hola '+String(a.nombre).replace(/^Ejemplo:\s*/,'').split(' ')[0]+'! '))}" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>`:''}
    <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger${ui.armed===a.id?' armed':''}" data-act="del-alumno" data-id="${esc(a.id)}">${ui.armed===a.id?'Toca otra vez para borrar':'Borrar'}</button>`}
@@ -1044,7 +1051,7 @@ function sheetConfig(){
 document.addEventListener('click',async e=>{
   document.querySelectorAll('.pick-list').forEach(L=>{if(!L.hidden&&!L.parentElement.contains(e.target))L.hidden=true});
   const b=e.target.closest('[data-act],[data-tab]');if(!b)return;
-  if(b.dataset.tab){ui.tab=b.dataset.tab;ui.open=null;try{localStorage.setItem('tenis-tab',ui.tab)}catch(_){}render();window.scrollTo(0,0);return}
+  if(b.dataset.tab){ui.tab=b.dataset.tab;ui.open=null;ui.perfil=null;try{localStorage.setItem('tenis-tab',ui.tab)}catch(_){}render();window.scrollTo(0,0);return}
   const act=b.dataset.act,id=b.dataset.id;
   if(act==='close-scrim'){if(e.target===b)closeSheet();return}
   if(!act.startsWith('del-'))ui.armed=null;
@@ -1106,6 +1113,8 @@ document.addEventListener('click',async e=>{
     case 'close':closeSheet();break;
     case 'new-alumno':sheetAlumno();break;
     case 'edit-alumno':sheetAlumno(alumno(id));break;
+    case 'open-perfil':ui.perfil=id;render();window.scrollTo(0,0);break;
+    case 'close-perfil':ui.perfil=null;render();window.scrollTo(0,0);break;
     case 'edit-clase':sheetClase(S.clases.find(c=>c.id===id));break;
     case 'new-pago':sheetPago(id);break;
     case 'set-estado':document.getElementById('c-estado').value=b.dataset.v;document.querySelectorAll('.states button').forEach(x=>x.setAttribute('aria-pressed',x===b));break;
@@ -1119,7 +1128,7 @@ document.addEventListener('click',async e=>{
       if(act==='del-club'){closeSheet();await removeDoc('clubes',id);toast('Club borrado')}
       if(act==='del-gasto'){await removeDoc('gastos',id);toast('Gasto borrado')}
       if(act==='del-clase'){closeSheet();await removeDoc('clases',id);toast('Clase borrada')}
-      if(act==='del-alumno'){closeSheet();await removeDoc('alumnos',id);toast('Alumno borrado')}
+      if(act==='del-alumno'){closeSheet();if(window.TAX)await window.TAX.onDeleteAlumno(id);ui.perfil=null;await removeDoc('alumnos',id);toast('Alumno borrado')}
       if(act==='del-pago'){await removeDoc('pagos',id);toast('Pago borrado')}
       break}
   }
@@ -1166,7 +1175,7 @@ document.addEventListener('submit',async e=>{
     }else{closeSheet();await save('clases',{...base,id:f.dataset.id});toast('Clase guardada')}
   }
   if(f.id==='f-alumno'){
-    const a={id:f.dataset.id,nombre:v('a-nombre').trim(),telefono:v('a-tel').trim(),tarifa:+v('a-tarifa')||0,pago:v('a-pago'),nota:v('a-nota'),link:(v('a-link')||'').trim(),titular:(v('a-titular')||'').trim()};
+    const a={id:f.dataset.id,nombre:v('a-nombre').trim(),telefono:v('a-tel').trim(),tarifa:+v('a-tarifa')||0,pago:v('a-pago'),nota:v('a-nota'),link:(v('a-link')||'').trim(),titular:(v('a-titular')||'').trim(),mano:v('a-mano'),reves:v('a-reves'),nivel:v('a-nivel'),objetivo:v('a-obj').trim(),salud:(v('a-salud')||'').trim(),camNota:(S.alumnos.find(x=>x.id===f.dataset.id)||{}).camNota||''};
     closeSheet();await save('alumnos',a);toast('Alumno guardado');
   }
   if(f.id==='f-club'){
@@ -1191,9 +1200,12 @@ document.addEventListener('submit',async e=>{
   }
   }catch(_){}
 });
+window.TA={S,ui,save,removeDoc,esc,uid,toast,sheet,closeSheet,render,alumno,today,parse,addDays,clp,dayName,
+  sb:()=>sb,user:()=>user,isCloud:()=>!!(cloud&&user),sub:()=>sub,setSync,persist:persistLocal};
 init();
 })();
 </script>
+<script src="perfil.js"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}))}</script>
 </body>
 </html>
