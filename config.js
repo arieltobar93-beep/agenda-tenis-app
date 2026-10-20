@@ -3,6 +3,6 @@ window.APP_CONFIG = {
   app: 'tenis',
   supabaseUrl: 'https://ihdyyszaokyktdorplfz.supabase.co',
   supabaseKey: 'sb_publishable_uhDigPao_sR_pUkOk1vD4g_y6c6_LCq',
-  payUrl: '',       // enlace de pago (Flow, Mercado Pago, etc.)
+  payUrl: 'https://mpago.la/1zXLALx',       // enlace de pago (Flow, Mercado Pago, etc.)
   contacto: 'arieltobar93@gmail.com'
 };
