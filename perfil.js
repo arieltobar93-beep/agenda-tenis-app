@@ -503,7 +503,7 @@ return out.join('\n');
 }
 const IA_MASC=/jorge|diego|juan|pablo|carlos|miguel|enrique|raul|ra[uú]l|alvaro|álvaro|antonio|pedro|andr[eé]s|jaime|lucas|male|masculin|hombre|man\b/i;
 const iaMasc=v=>!!v&&IA_MASC.test(v.name||'');
-function iaVoces(){const ss=window.speechSynthesis;const vs=ss?ss.getVoices().filter(x=>/^es/i.test(x.lang)):[];return vs.sort((a,b)=>(iaMasc(b)-iaMasc(a))||(/es[-_]CL/i.test(b.lang)-/es[-_]CL/i.test(a.lang)))}
+function iaVoces(){const ss=window.speechSynthesis;const vs=ss?ss.getVoices().filter(x=>/^es/i.test(x.lang)):[];return vs.sort((a,b)=>(/es[-_]CL/i.test(b.lang)-/es[-_]CL/i.test(a.lang))||(/es[-_](US|MX|419)/i.test(b.lang)-/es[-_](US|MX|419)/i.test(a.lang)))}
 function iaVoz(){const vs=iaVoces();let n='';try{n=localStorage.getItem('ta_voz')||''}catch(_){}return vs.find(x=>x.name===n)||vs[0]||null}
 function iaCambiarVoz(){const vs=iaVoces();if(!vs.length){toast('Tu celular no tiene otras voces en español');return null}const a=iaVoz();const v=vs[(vs.indexOf(a)+1)%vs.length];try{localStorage.setItem('ta_voz',v.name)}catch(_){}return v}
 function iaHablado(root,titulo){const t=iaTexto(root,titulo).split('\n');t.shift();return ((iaHab||'Análisis')+'.\n'+t.join('\n')).replace(/•\s*/g,'').replace(/:\n/g,': ').replace(/\n+/g,'. ').replace(/\.\s*\./g,'.').replace(/\s+/g,' ')}
@@ -516,7 +516,7 @@ for(const p of parts){if(cur&&(cur+p).length>150){chunks.push(cur.trim());cur=p}
 if(cur.trim())chunks.push(cur.trim());
 const v=iaVoz();let i=0;btn._on=true;btn.textContent='⏹ Detener';ss.cancel();
 const fin=()=>{btn._on=false;btn.textContent='🔊 Escuchar'};
-const next=()=>{if(!btn._on||i>=chunks.length){fin();return}const u=new SpeechSynthesisUtterance(chunks[i++]);if(v){u.voice=v;u.lang=v.lang}else u.lang='es-CL';u.pitch=iaMasc(v)?1:.85;u.rate=1;u.onend=next;u.onerror=fin;ss.speak(u)};
+const next=()=>{if(!btn._on||i>=chunks.length){fin();return}const u=new SpeechSynthesisUtterance(chunks[i++]);if(v){u.voice=v;u.lang=v.lang}else u.lang='es-CL';u.rate=.95;u.onend=next;u.onerror=fin;ss.speak(u)};
 setTimeout(next,80);
 }
 function iaHablarViejo(texto,btn){
