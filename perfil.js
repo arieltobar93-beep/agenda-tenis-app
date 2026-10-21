@@ -495,14 +495,37 @@ function iaHtml(ia){
   ${L('Por fases del golpe',ia.fases)}${L('Lo que está bien',ia.fortalezas)}${L('Para mejorar',ia.mejoras)}${L('Comparación',ia.comparacion)}${L('Para revisar en la próxima grabación',ia.puntos_a_revisar)}
   ${ia.calidad_video?`<div><h4>Calidad del video</h4><div>${esc(ia.calidad_video)}</div></div>`:''}</div>`;
 }
-function dialogIA(html,onSave){
+let iaTit='';
+function iaTexto(root,titulo){
+const out=[titulo||'Análisis de tu golpe'];
+root.querySelectorAll('.xia > div:not(.aviso)').forEach(b=>{const h=b.querySelector('h4');if(h)out.push('\n'+h.textContent+':');const li=b.querySelectorAll('li');if(li.length)li.forEach(x=>out.push('• '+x.textContent));else{const t=[...b.children].filter(c=>c!==h).map(c=>c.textContent).join(' ');if(t.trim())out.push(t.trim())}});
+return out.join('\n');
+}
+function iaHablar(texto,btn){
+const ss=window.speechSynthesis;
+if(!ss||!window.SpeechSynthesisUtterance){toast('Tu celular no permite leer en voz alta');return}
+if(ss.speaking||ss.pending){ss.cancel();btn.textContent='🔊 Escuchar';return}
+const u=new SpeechSynthesisUtterance(texto.replace(/•/g,'').replace(/\n+/g,'. '));
+const vs=ss.getVoices();const v=vs.find(x=>/es[-_]CL/i.test(x.lang))||vs.find(x=>/es[-_](US|MX|419)/i.test(x.lang))||vs.find(x=>/^es/i.test(x.lang));
+if(v){u.voice=v;u.lang=v.lang}else u.lang='es-CL';
+u.rate=.95;u.onend=u.onerror=()=>{btn.textContent='🔊 Escuchar'};
+btn.textContent='⏹ Detener';ss.speak(u);
+}
+async function iaCompartir(texto,titulo){
+try{if(navigator.share){await navigator.share({title:titulo,text:texto});return}}catch(e){if(e&&e.name==='AbortError')return}
+try{await navigator.clipboard.writeText(texto);toast('Texto copiado: pégalo en WhatsApp o donde quieras')}catch(_){window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank')}
+}
+function dialogIA(html,onSave,titulo){titulo=titulo||iaTit;
   const old=document.getElementById('xia');if(old)old.remove();
   const d=document.createElement('div');d.id='xia';d.style.cssText='position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)';
   d.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" style="max-height:88vh;overflow:auto"><h2>Análisis con IA</h2>${html}
   ${onSave?`<div class="field"><label for="xia-n">Mis comentarios (opcional)</label><textarea id="xia-n" rows="2" placeholder="Lo que tú agregarías o corregirías"></textarea></div>`:''}
+  ${html.includes('class="xia"')?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><button type="button" class="btn ghost" data-ia="hablar">🔊 Escuchar</button><button type="button" class="btn ghost" data-ia="compartir">📤 Compartir</button></div>`:''}
   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-ia="close">Cerrar</button>${onSave?'<button type="button" class="btn primary" data-ia="save">Guardar en el video</button>':''}</div></div></div>`;
   document.body.appendChild(d);
-  d.onclick=async e=>{const b=e.target.closest('[data-ia]');if(e.target===d||(b&&b.dataset.ia==='close')){d.remove();return}
+  d.onclick=async e=>{const b=e.target.closest('[data-ia]');if(e.target===d||(b&&b.dataset.ia==='close')){try{window.speechSynthesis.cancel()}catch(_){}d.remove();return}
+    if(b&&b.dataset.ia==='hablar'){iaHablar(iaTexto(d,titulo),b);return}
+    if(b&&b.dataset.ia==='compartir'){let t=iaTexto(d,titulo);const nt=document.getElementById('xia-n');const nn=d.querySelector('.note');if(nt&&nt.value.trim())t+='\n\nComentarios del profe:\n'+nt.value.trim();else if(nn)t+='\n\n'+nn.textContent;await iaCompartir(t,titulo||'Análisis de tu golpe');return}
     if(b&&b.dataset.ia==='save'){b.disabled=true;await onSave(document.getElementById('xia-n').value.trim());d.remove()}};
 }
 async function analizar(recs,onSaved){
@@ -530,6 +553,7 @@ async function analizar(recs,onSaved){
     w.end();
     if(msg){dialogIA(`<div class="note">${esc(msg)}</div>`);return}
     const an=data.analisis;
+    {const l=recs[recs.length-1],al=A.alumno&&A.alumno(l.alumnoId);iaTit='Análisis de '+(GOLPES[l.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+A.today()}
     dialogIA(iaHtml(an),async nota=>{
       const last=recs[recs.length-1];
       const ia={...an,fecha:A.today(),notaProfe:nota,vs:recs.length>1?recs[0].id:null};
@@ -656,7 +680,7 @@ async function openViewer(arg){
       case 'clear':panes.forEach(P=>{P.shapes=[];P.cur=null});redrawAll();break;
       case 'mark':{pause();const i=+b.dataset.i;imp[i]=Vs[i].currentTime;await patch(i,{impacto:Math.round(imp[i]*100)/100});t=Vs[0].currentTime-imp[0];setT(t);break}
       case 'ia':analizar(recs,ia=>{recs[recs.length-1]={...recs[recs.length-1],ia};drawInfo()});break;
-      case 'ia-ver':{const r=recs[recs.length-1];if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
+      case 'ia-ver':{const r=recs[recs.length-1];if(r.ia){const al=A.alumno&&A.alumno(r.alumnoId);iaTit='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+(r.ia.fecha||A.today())}if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
       case 'cmp':{const al=recs[0].alumnoId,id=recs[0].id;dispose();sheetComparar(al,id);break}
       case 'del':{
         if(ui.armed!=='vdel'){ui.armed='vdel';b.textContent='Toca otra vez para borrar';return}
