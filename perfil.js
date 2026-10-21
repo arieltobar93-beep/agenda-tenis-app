@@ -6,6 +6,7 @@ const A=window.TA;if(!A)return;
 const {S,ui,esc,uid,toast}=A;
 const BUCKET='videos';
 const MAX_SEG=20;            // segundos máximos al grabar
+const MAX_DIA=10; // videos por día
 const MAX_SUBIDA=25*1024*1024; // límite del bucket
 const GOLPES={derecha:'Derecha',reves:'Revés',saque:'Saque',volea:'Volea',remate:'Remate',otro:'Otro'};
 const ANGULOS={atras:'Desde atrás',costado:'De costado',frente:'De frente',otro:'Otro ángulo'};
@@ -310,6 +311,7 @@ async function saveVideo(m){
   const u=A.user(),s=sb();
   if(!u||!s){toast('Inicia sesión para guardar videos');return false}
   if(!A.sub().activo){toast('Tu prueba terminó: activa tu cuenta para guardar videos');return false}
+if((A.S.videos||[]).filter(v=>v.fecha===A.today()).length>=MAX_DIA){toast('Llegaste al máximo de '+MAX_DIA+' videos por día. Mañana puedes subir más.');return false}
   if(m.blob.size>MAX_SUBIDA){toast('El video pesa demasiado ('+mb(m.blob.size)+'). Graba un clip más corto.');return false}
   const id=uid(),ext=extOf(m.mime),path=`${u.id}/${m.alumnoId}/${id}.${ext}`;
   const w=wait('Subiendo video…');
@@ -328,7 +330,7 @@ async function saveVideo(m){
   }catch(e){
     w.end();
     const msg=String((e&&e.message)||e);
-    toast(/row-level|policy|403|Unauthorized/i.test(msg)?'No se pudo guardar: revisa que tu cuenta esté activa':'No se pudo subir el video. Revisa tu internet e intenta de nuevo');
+    toast(/row-level|policy|403|Unauthorized/i.test(msg)?'No se pudo guardar: llegaste al máximo de '+MAX_DIA+' videos por día o tu cuenta no está activa':'No se pudo subir el video. Revisa tu internet e intenta de nuevo');
     return false;
   }
 }
