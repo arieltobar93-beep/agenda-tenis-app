@@ -510,6 +510,18 @@ function iaHablado(root,titulo){const t=iaTexto(root,titulo).split('\n');t.shift
 function iaHablar(texto,btn){
 const ss=window.speechSynthesis;
 if(!ss||!window.SpeechSynthesisUtterance){toast('Tu celular no permite leer en voz alta');return}
+if(btn._on){btn._on=false;ss.cancel();btn.textContent='🔊 Escuchar';return}
+const parts=texto.match(/[^.!?]+[.!?]*/g)||[texto];const chunks=[];let cur='';
+for(const p of parts){if(cur&&(cur+p).length>150){chunks.push(cur.trim());cur=p}else cur+=p}
+if(cur.trim())chunks.push(cur.trim());
+const v=iaVoz();let i=0;btn._on=true;btn.textContent='⏹ Detener';ss.cancel();
+const fin=()=>{btn._on=false;btn.textContent='🔊 Escuchar'};
+const next=()=>{if(!btn._on||i>=chunks.length){fin();return}const u=new SpeechSynthesisUtterance(chunks[i++]);if(v){u.voice=v;u.lang=v.lang}else u.lang='es-CL';u.pitch=iaMasc(v)?1:.85;u.rate=1;u.onend=next;u.onerror=fin;ss.speak(u)};
+setTimeout(next,80);
+}
+function iaHablarViejo(texto,btn){
+const ss=window.speechSynthesis;
+if(!ss||!window.SpeechSynthesisUtterance){toast('Tu celular no permite leer en voz alta');return}
 if(ss.speaking||ss.pending){ss.cancel();btn.textContent='🔊 Escuchar';return}
 const u=new SpeechSynthesisUtterance(texto);
 const v=iaVoz();
@@ -529,8 +541,8 @@ function dialogIA(html,onSave,titulo){titulo=titulo||iaTit;
   ${html.includes('class="xia"')?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><button type="button" class="btn ghost" data-ia="hablar">🔊 Escuchar</button><button type="button" class="btn ghost" data-ia="compartir">📤 Compartir</button><button type="button" class="btn ghost" data-ia="voz">🎙 Cambiar voz</button></div>`:''}
   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-ia="close">Cerrar</button>${onSave?'<button type="button" class="btn primary" data-ia="save">Guardar en el video</button>':''}</div></div></div>`;
   document.body.appendChild(d);
-  d.onclick=async e=>{const b=e.target.closest('[data-ia]');if(e.target===d||(b&&b.dataset.ia==='close')){try{window.speechSynthesis.cancel()}catch(_){}d.remove();return}
-    if(b&&b.dataset.ia==='voz'){try{window.speechSynthesis.cancel()}catch(_){}const v=iaCambiarVoz();if(v){toast('Voz: '+v.name);const hb=d.querySelector('[data-ia=hablar]');hb.textContent='🔊 Escuchar';setTimeout(()=>iaHablar(iaHablado(d,titulo),hb),150)}return}
+  d.onclick=async e=>{const b=e.target.closest('[data-ia]');if(e.target===d||(b&&b.dataset.ia==='close')){try{const hb=d.querySelector('[data-ia=hablar]');if(hb)hb._on=false;window.speechSynthesis.cancel()}catch(_){}d.remove();return}
+    if(b&&b.dataset.ia==='voz'){try{const h0=d.querySelector('[data-ia=hablar]');if(h0)h0._on=false;window.speechSynthesis.cancel()}catch(_){}const v=iaCambiarVoz();if(v){toast('Voz: '+v.name);const hb=d.querySelector('[data-ia=hablar]');hb.textContent='🔊 Escuchar';setTimeout(()=>iaHablar(iaHablado(d,titulo),hb),150)}return}
     if(b&&b.dataset.ia==='hablar'){iaHablar(iaHablado(d,titulo),b);return}
     if(b&&b.dataset.ia==='compartir'){let t=iaTexto(d,titulo);const nt=document.getElementById('xia-n');const nn=d.querySelector('.note');if(nt&&nt.value.trim())t+='\n\nComentarios del profe:\n'+nt.value.trim();else if(nn)t+='\n\n'+nn.textContent;await iaCompartir(t,titulo||'Análisis de tu golpe');return}
     if(b&&b.dataset.ia==='save'){b.disabled=true;await onSave(document.getElementById('xia-n').value.trim());d.remove()}};
