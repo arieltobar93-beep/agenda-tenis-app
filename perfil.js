@@ -495,20 +495,26 @@ function iaHtml(ia){
   ${L('Por fases del golpe',ia.fases)}${L('Lo que está bien',ia.fortalezas)}${L('Para mejorar',ia.mejoras)}${L('Comparación',ia.comparacion)}${L('Para revisar en la próxima grabación',ia.puntos_a_revisar)}
   ${ia.calidad_video?`<div><h4>Calidad del video</h4><div>${esc(ia.calidad_video)}</div></div>`:''}</div>`;
 }
-let iaTit='';
+let iaTit='',iaHab='';
 function iaTexto(root,titulo){
 const out=[titulo||'Análisis de tu golpe'];
 root.querySelectorAll('.xia > div:not(.aviso)').forEach(b=>{const h=b.querySelector('h4');if(h)out.push('\n'+h.textContent+':');const li=b.querySelectorAll('li');if(li.length)li.forEach(x=>out.push('• '+x.textContent));else{const t=[...b.children].filter(c=>c!==h).map(c=>c.textContent).join(' ');if(t.trim())out.push(t.trim())}});
 return out.join('\n');
 }
+const IA_MASC=/jorge|diego|juan|pablo|carlos|miguel|enrique|raul|ra[uú]l|alvaro|álvaro|antonio|pedro|andr[eé]s|jaime|lucas|male|masculin|hombre|man\b/i;
+const iaMasc=v=>!!v&&IA_MASC.test(v.name||'');
+function iaVoces(){const ss=window.speechSynthesis;const vs=ss?ss.getVoices().filter(x=>/^es/i.test(x.lang)):[];return vs.sort((a,b)=>(iaMasc(b)-iaMasc(a))||(/es[-_]CL/i.test(b.lang)-/es[-_]CL/i.test(a.lang)))}
+function iaVoz(){const vs=iaVoces();let n='';try{n=localStorage.getItem('ta_voz')||''}catch(_){}return vs.find(x=>x.name===n)||vs[0]||null}
+function iaCambiarVoz(){const vs=iaVoces();if(!vs.length){toast('Tu celular no tiene otras voces en español');return null}const a=iaVoz();const v=vs[(vs.indexOf(a)+1)%vs.length];try{localStorage.setItem('ta_voz',v.name)}catch(_){}return v}
+function iaHablado(root,titulo){const t=iaTexto(root,titulo).split('\n');t.shift();return ((iaHab||'Análisis')+'.\n'+t.join('\n')).replace(/•\s*/g,'').replace(/:\n/g,': ').replace(/\n+/g,'. ').replace(/\.\s*\./g,'.').replace(/\s+/g,' ')}
 function iaHablar(texto,btn){
 const ss=window.speechSynthesis;
 if(!ss||!window.SpeechSynthesisUtterance){toast('Tu celular no permite leer en voz alta');return}
 if(ss.speaking||ss.pending){ss.cancel();btn.textContent='🔊 Escuchar';return}
-const u=new SpeechSynthesisUtterance(texto.replace(/•/g,'').replace(/\n+/g,'. '));
-const vs=ss.getVoices();const v=vs.find(x=>/es[-_]CL/i.test(x.lang))||vs.find(x=>/es[-_](US|MX|419)/i.test(x.lang))||vs.find(x=>/^es/i.test(x.lang));
+const u=new SpeechSynthesisUtterance(texto);
+const v=iaVoz();
 if(v){u.voice=v;u.lang=v.lang}else u.lang='es-CL';
-u.rate=.95;u.onend=u.onerror=()=>{btn.textContent='🔊 Escuchar'};
+u.pitch=iaMasc(v)?.9:.55;u.rate=.95;u.onend=u.onerror=()=>{btn.textContent='🔊 Escuchar'};
 btn.textContent='⏹ Detener';ss.speak(u);
 }
 async function iaCompartir(texto,titulo){
@@ -520,13 +526,33 @@ function dialogIA(html,onSave,titulo){titulo=titulo||iaTit;
   const d=document.createElement('div');d.id='xia';d.style.cssText='position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)';
   d.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" style="max-height:88vh;overflow:auto"><h2>Análisis con IA</h2>${html}
   ${onSave?`<div class="field"><label for="xia-n">Mis comentarios (opcional)</label><textarea id="xia-n" rows="2" placeholder="Lo que tú agregarías o corregirías"></textarea></div>`:''}
-  ${html.includes('class="xia"')?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><button type="button" class="btn ghost" data-ia="hablar">🔊 Escuchar</button><button type="button" class="btn ghost" data-ia="compartir">📤 Compartir</button></div>`:''}
+  ${html.includes('class="xia"')?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><button type="button" class="btn ghost" data-ia="hablar">🔊 Escuchar</button><button type="button" class="btn ghost" data-ia="compartir">📤 Compartir</button><button type="button" class="btn ghost" data-ia="voz">🎙 Cambiar voz</button></div>`:''}
   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-ia="close">Cerrar</button>${onSave?'<button type="button" class="btn primary" data-ia="save">Guardar en el video</button>':''}</div></div></div>`;
   document.body.appendChild(d);
   d.onclick=async e=>{const b=e.target.closest('[data-ia]');if(e.target===d||(b&&b.dataset.ia==='close')){try{window.speechSynthesis.cancel()}catch(_){}d.remove();return}
-    if(b&&b.dataset.ia==='hablar'){iaHablar(iaTexto(d,titulo),b);return}
+    if(b&&b.dataset.ia==='voz'){try{window.speechSynthesis.cancel()}catch(_){}const v=iaCambiarVoz();if(v){toast('Voz: '+v.name);const hb=d.querySelector('[data-ia=hablar]');hb.textContent='🔊 Escuchar';setTimeout(()=>iaHablar(iaHablado(d,titulo),hb),150)}return}
+    if(b&&b.dataset.ia==='hablar'){iaHablar(iaHablado(d,titulo),b);return}
     if(b&&b.dataset.ia==='compartir'){let t=iaTexto(d,titulo);const nt=document.getElementById('xia-n');const nn=d.querySelector('.note');if(nt&&nt.value.trim())t+='\n\nComentarios del profe:\n'+nt.value.trim();else if(nn)t+='\n\n'+nn.textContent;await iaCompartir(t,titulo||'Análisis de tu golpe');return}
     if(b&&b.dataset.ia==='save'){b.disabled=true;await onSave(document.getElementById('xia-n').value.trim());d.remove()}};
+}
+async function tomarFotogramas(v,dur,r,comp){
+const mk=async(t,w)=>{await seek(v,t);return {t:Math.round(t*100)/100,img:frameCanvas(v,w).toDataURL('image/jpeg',.7).split(',')[1]}};
+let ti=r.impacto||0,auto=false;
+if(!ti){
+const step=Math.max(.2,dur/50),mv=[];let last=null;
+for(let t=.05;t<dur-.05;t+=step){await seek(v,t);const c=frameCanvas(v,48),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;if(last){let q=0;for(let i=0;i<d.length;i+=16)q+=Math.abs(d[i]-last[i]);mv.push({t,q})}last=d}
+const k=Math.max(1,Math.round(1/step));let best=-1,bt=dur/2;
+for(let i=0;i<mv.length;i++){let q=0;for(let j=i;j<Math.min(mv.length,i+k);j++)q+=mv[j].q;if(q>best){best=q;bt=mv[Math.min(mv.length-1,i+(k>>1))].t}}
+ti=Math.round(bt*100)/100;auto=true;
+}
+const ts=[];const ng=comp?4:8,nd=comp?8:14;
+for(let k=0;k<ng;k++)ts.push({t:.05+(dur-.1)*k/(ng-1),w:480});
+const a=Math.max(0,ti-1),b=Math.min(dur-.05,ti+.7);
+for(let k=0;k<nd;k++)ts.push({t:a+(b-a)*k/(nd-1),w:640});
+ts.sort((x,y)=>x.t-y.t);
+const fr=[];let pt=-1;
+for(const x of ts){if(x.t-pt<.06)continue;pt=x.t;fr.push(await mk(x.t,x.w))}
+fr.auto=auto;fr.ti=ti;return fr;
 }
 async function analizar(recs,onSaved){
   if(!A.sub().activo){toast('Tu prueba terminó: activa tu cuenta para usar la IA');return}
@@ -535,14 +561,14 @@ async function analizar(recs,onSaved){
   try{
     const out=[];let i=0;
     for(const r of recs){
-      w.set('Preparando fotogramas '+(++i)+' de '+recs.length);
+      w.set('Revisando todo el video '+(++i)+' de '+recs.length+'… puede tardar un poco');
       const url=(await signed([r.path]))[r.path];if(!url)throw new Error('No se pudo abrir el video');
       const v=await loadVideo(url,true);const dur=isFinite(v.duration)&&v.duration>0?v.duration:(r.dur||2);
-      const n=recs.length>1?6:8;let t0,t1;
-      if(r.impacto){t0=Math.max(0,r.impacto-0.9);t1=Math.min(dur-0.05,r.impacto+0.6)}else{t0=Math.min(0.1,dur/4);t1=Math.max(t0+0.2,dur-0.1)}
-      const frames=[];
-      for(let k=0;k<n;k++){await seek(v,t0+(t1-t0)*k/(n-1));frames.push(frameCanvas(v,640).toDataURL('image/jpeg',.7).split(',')[1])}
-      out.push({etiqueta:recs.length>1?(i===1?'Video A (antes)':'Video B (ahora)'):'Video',fecha:r.fecha,golpe:GOLPES[r.golpe]||'',angulo:ANGULOS[r.angulo]||'',nota:r.nota||'',impacto_marcado:!!r.impacto,frames});
+      const fr=await tomarFotogramas(v,dur,r,recs.length>1);
+      
+      
+      
+      out.push({etiqueta:recs.length>1?(i===1?'Video A (antes)':'Video B (ahora)'):'Video',fecha:r.fecha,golpe:GOLPES[r.golpe]||'',angulo:ANGULOS[r.angulo]||'',nota:r.nota||'',impacto_marcado:!!r.impacto,impacto_auto:fr.auto?fr.ti:null,frames:fr});
     }
     w.set('Esperando a la IA… puede tardar unos segundos');
     const a=A.alumno(recs[0].alumnoId)||{};
@@ -553,7 +579,7 @@ async function analizar(recs,onSaved){
     w.end();
     if(msg){dialogIA(`<div class="note">${esc(msg)}</div>`);return}
     const an=data.analisis;
-    {const l=recs[recs.length-1],al=A.alumno&&A.alumno(l.alumnoId);iaTit='Análisis de '+(GOLPES[l.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+A.today()}
+    {const l=recs[recs.length-1],al=A.alumno&&A.alumno(l.alumnoId);iaTit='Análisis de '+(GOLPES[l.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+A.today();iaHab='Análisis de '+(GOLPES[l.golpe]||'golpe').toLowerCase()+(al?' de '+String(al.nombre).split(' ')[0]:'')}
     dialogIA(iaHtml(an),async nota=>{
       const last=recs[recs.length-1];
       const ia={...an,fecha:A.today(),notaProfe:nota,vs:recs.length>1?recs[0].id:null};
@@ -680,7 +706,7 @@ async function openViewer(arg){
       case 'clear':panes.forEach(P=>{P.shapes=[];P.cur=null});redrawAll();break;
       case 'mark':{pause();const i=+b.dataset.i;imp[i]=Vs[i].currentTime;await patch(i,{impacto:Math.round(imp[i]*100)/100});t=Vs[0].currentTime-imp[0];setT(t);break}
       case 'ia':analizar(recs,ia=>{recs[recs.length-1]={...recs[recs.length-1],ia};drawInfo()});break;
-      case 'ia-ver':{const r=recs[recs.length-1];if(r.ia){const al=A.alumno&&A.alumno(r.alumnoId);iaTit='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+(r.ia.fecha||A.today())}if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
+      case 'ia-ver':{const r=recs[recs.length-1];if(r.ia){const al=A.alumno&&A.alumno(r.alumnoId);iaTit='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+(r.ia.fecha||A.today());iaHab='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' de '+String(al.nombre).split(' ')[0]:'')}if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
       case 'cmp':{const al=recs[0].alumnoId,id=recs[0].id;dispose();sheetComparar(al,id);break}
       case 'del':{
         if(ui.armed!=='vdel'){ui.armed='vdel';b.textContent='Toca otra vez para borrar';return}
