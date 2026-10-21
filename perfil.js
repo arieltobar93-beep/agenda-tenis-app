@@ -529,6 +529,83 @@ if(v){u.voice=v;u.lang=v.lang}else u.lang='es-CL';
 u.pitch=iaMasc(v)?.9:.55;u.rate=.95;u.onend=u.onerror=()=>{btn.textContent='🔊 Escuchar'};
 btn.textContent='⏹ Detener';ss.speak(u);
 }
+let iaCtx=null;
+function iaElegir(fr){
+if(!fr||!fr.length)return [];
+const ti=fr.ti||0;let b=fr.filter(f=>f.t>=ti-1&&f.t<=ti+.7);if(b.length<6)b=fr;
+const n=Math.min(6,b.length),o=[];
+for(let k=0;k<n;k++){const f=b[Math.round(k*(b.length-1)/Math.max(1,n-1))];if(!o.includes(f))o.push(f)}
+return o;
+}
+async function iaFotosVideo(c){
+const rec=c.rec;const url=(await signed([rec.path]))[rec.path];if(!url)throw new Error('No se pudo abrir el video');
+const v=await loadVideo(url,true);const dur=isFinite(v.duration)&&v.duration>0?v.duration:(rec.dur||2);
+const ts=c.ts&&c.ts.length?c.ts:Array.from({length:6},(_,k)=>.2+(dur-.4)*k/5);const out=[];
+for(const t of ts){await seek(v,Math.min(t,dur-.05));const cv=frameCanvas(v,480);out.push({t,img:cv.toDataURL('image/jpeg',.75).split(',')[1],w:cv.width,h:cv.height})}
+return out;
+}
+async function iaCargarPdf(){
+if(window.jspdf)return window.jspdf.jsPDF;
+await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar el generador de PDF. Revisa tu internet.'));document.head.appendChild(s)});
+return window.jspdf.jsPDF;
+}
+function iaPdfDoc(J,o){
+const doc=new J({unit:'mm',format:'a4'});const W=210,M=14,LIM=282;
+const limpia=t=>String(t==null?'':t).replace(/[^\x20-\x7E\xA0-\xFF–—‘’“”•…]/g,'');
+const ia=o.ia||{};let y=0;
+doc.setFillColor(31,90,138);doc.rect(0,0,W,24,'F');
+doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Agenda de Tenis',M,11);
+doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(limpia('Análisis de técnica con IA'),M,18);
+const partes=String(o.titulo||'Análisis de tu golpe').split(' · ');
+let tit=partes[0];tit=tit.charAt(0).toUpperCase()+tit.slice(1);if(partes[1])tit+=' - '+partes[1];
+y=34;doc.setTextColor(20,30,40);doc.setFont('helvetica','bold');doc.setFontSize(15);
+const tl=doc.splitTextToSize(limpia(tit),W-2*M);doc.text(tl,M,y);y+=tl.length*7;
+if(partes[2]){doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(100,110,120);doc.text(limpia('Fecha: '+partes[2]),M,y);y+=7}
+y+=2;
+const fotos=o.fotos||[];
+if(fotos.length){
+const cols=3,gap=4,cw=(W-2*M-gap*(cols-1))/cols;
+for(let i=0;i<fotos.length;i+=cols){
+const fila=fotos.slice(i,i+cols);const hs=fila.map(f=>Math.min(cw*f.h/f.w,72));const rh=Math.max(...hs)+7;
+if(y+rh>LIM){doc.addPage();y=16}
+fila.forEach((f,k)=>{const h=hs[k],w2=h*f.w/f.h,x=M+k*(cw+gap)+(cw-w2)/2;
+doc.addImage('data:image/jpeg;base64,'+f.img,'JPEG',x,y,w2,h);
+doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(110,120,130);doc.text(String(Math.round(f.t*10)/10).replace('.',',')+' s',M+k*(cw+gap)+cw/2,y+h+4,{align:'center'})});
+y+=rh+2;
+}
+y+=2;
+}
+const salto=h=>{if(y+h>LIM){doc.addPage();y=16}};
+const H=t=>{salto(14);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(31,90,138);doc.text(limpia(t),M,y);y+=6};
+const P=(t,ind,pre)=>{doc.setFont('helvetica','normal');doc.setFontSize(10);doc.setTextColor(30,40,50);
+const ls=doc.splitTextToSize(limpia(t),W-2*M-(ind||0));
+ls.forEach((l,i)=>{salto(5.5);if(pre&&i===0)doc.text(pre,M+(ind||0)-4,y);doc.text(l,M+(ind||0),y);y+=5})};
+const LST=(t,arr)=>{if(!arr||!arr.length)return;H(t);arr.forEach(x=>{P(typeof x==='string'?x:((x.nombre?x.nombre+': ':'')+(x.observacion||'')),5,'•');y+=1});y+=3};
+if(ia.resumen){H('Resumen');P(ia.resumen);y+=4}
+LST('Por fases del golpe',ia.fases);LST('Lo que está bien',ia.fortalezas);LST('Para mejorar',ia.mejoras);LST('Comparación',ia.comparacion);LST('Para revisar en la próxima grabación',ia.puntos_a_revisar);
+if(ia.calidad_video){H('Calidad del video');P(ia.calidad_video);y+=4}
+if(o.nota){H('Comentarios del profesor');P(o.nota);y+=4}
+const n=doc.getNumberOfPages();
+for(let p=1;p<=n;p++){doc.setPage(p);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(120,130,140);
+doc.text(limpia('Observaciones orientativas generadas con IA a partir de fotogramas del video; el profesor tiene la última palabra.'),M,291);
+doc.text(p+' / '+n,W-M,291,{align:'right'})}
+return doc;
+}
+async function iaPdfCompartir(d){
+const c=iaCtx;const w=wait('Preparando el PDF…');
+try{
+const J=await iaCargarPdf();
+if(!c.fotos)c.fotos=await iaFotosVideo(c);
+const nt=d.querySelector('#xia-n');const nota=nt?nt.value.trim():(c.ia.notaProfe||'');
+const doc=iaPdfDoc(J,{titulo:iaTit,ia:c.ia,fotos:c.fotos,nota});
+const blob=doc.output('blob');w.end();
+const nombre=(iaHab||'Analisis').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-')+'.pdf';
+const file=new File([blob],nombre,{type:'application/pdf'});
+if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:iaTit});return}catch(e){if(e&&e.name==='AbortError')return}}
+const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=nombre;document.body.appendChild(a);a.click();
+setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('PDF descargado: envíalo desde tus archivos');
+}catch(e){w.end();toast('No se pudo crear el PDF: '+String((e&&e.message)||e))}
+}
 async function iaCompartir(texto,titulo){
 try{if(navigator.share){await navigator.share({title:titulo,text:texto});return}}catch(e){if(e&&e.name==='AbortError')return}
 try{await navigator.clipboard.writeText(texto);toast('Texto copiado: pégalo en WhatsApp o donde quieras')}catch(_){window.open('https://wa.me/?text='+encodeURIComponent(texto),'_blank')}
@@ -538,17 +615,18 @@ function dialogIA(html,onSave,titulo){titulo=titulo||iaTit;
   const d=document.createElement('div');d.id='xia';d.style.cssText='position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.55)';
   d.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" style="max-height:88vh;overflow:auto"><h2>Análisis con IA</h2>${html}
   ${onSave?`<div class="field"><label for="xia-n">Mis comentarios (opcional)</label><textarea id="xia-n" rows="2" placeholder="Lo que tú agregarías o corregirías"></textarea></div>`:''}
-  ${html.includes('class="xia"')?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><button type="button" class="btn ghost" data-ia="hablar">🔊 Escuchar</button><button type="button" class="btn ghost" data-ia="compartir">📤 Compartir</button><button type="button" class="btn ghost" data-ia="voz">🎙 Cambiar voz</button></div>`:''}
+  ${html.includes('class="xia"')?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0"><button type="button" class="btn ghost" data-ia="hablar">🔊 Escuchar</button><button type="button" class="btn ghost" data-ia="compartir">📄 Compartir PDF</button><button type="button" class="btn ghost" data-ia="voz">🎙 Cambiar voz</button></div>`:''}
   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-ia="close">Cerrar</button>${onSave?'<button type="button" class="btn primary" data-ia="save">Guardar en el video</button>':''}</div></div></div>`;
   document.body.appendChild(d);
   d.onclick=async e=>{const b=e.target.closest('[data-ia]');if(e.target===d||(b&&b.dataset.ia==='close')){try{const hb=d.querySelector('[data-ia=hablar]');if(hb)hb._on=false;window.speechSynthesis.cancel()}catch(_){}d.remove();return}
     if(b&&b.dataset.ia==='voz'){try{const h0=d.querySelector('[data-ia=hablar]');if(h0)h0._on=false;window.speechSynthesis.cancel()}catch(_){}const v=iaCambiarVoz();if(v){toast('Voz: '+v.name);const hb=d.querySelector('[data-ia=hablar]');hb.textContent='🔊 Escuchar';setTimeout(()=>iaHablar(iaHablado(d,titulo),hb),150)}return}
     if(b&&b.dataset.ia==='hablar'){iaHablar(iaHablado(d,titulo),b);return}
+    if(b&&b.dataset.ia==='compartir'&&iaCtx&&iaCtx.ia){b.disabled=true;await iaPdfCompartir(d);b.disabled=false;return}
     if(b&&b.dataset.ia==='compartir'){let t=iaTexto(d,titulo);const nt=document.getElementById('xia-n');const nn=d.querySelector('.note');if(nt&&nt.value.trim())t+='\n\nComentarios del profe:\n'+nt.value.trim();else if(nn)t+='\n\n'+nn.textContent;await iaCompartir(t,titulo||'Análisis de tu golpe');return}
     if(b&&b.dataset.ia==='save'){b.disabled=true;await onSave(document.getElementById('xia-n').value.trim());d.remove()}};
 }
 async function tomarFotogramas(v,dur,r,comp){
-const mk=async(t,w)=>{await seek(v,t);return {t:Math.round(t*100)/100,img:frameCanvas(v,w).toDataURL('image/jpeg',.7).split(',')[1]}};
+const mk=async(t,w)=>{await seek(v,t);const c=frameCanvas(v,w);return {t:Math.round(t*100)/100,img:c.toDataURL('image/jpeg',.7).split(',')[1],w:c.width,h:c.height}};
 let ti=r.impacto||0,auto=false;
 if(!ti){
 const step=Math.max(.2,dur/50),mv=[];let last=null;
@@ -592,9 +670,10 @@ async function analizar(recs,onSaved){
     if(msg){dialogIA(`<div class="note">${esc(msg)}</div>`);return}
     const an=data.analisis;
     {const l=recs[recs.length-1],al=A.alumno&&A.alumno(l.alumnoId);iaTit='Análisis de '+(GOLPES[l.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+A.today();iaHab='Análisis de '+(GOLPES[l.golpe]||'golpe').toLowerCase()+(al?' de '+String(al.nombre).split(' ')[0]:'')}
+    iaCtx={ia:an,rec:recs[recs.length-1],fotos:iaElegir(out[out.length-1].frames),ts:null};iaCtx.ts=iaCtx.fotos.map(f=>f.t);
     dialogIA(iaHtml(an),async nota=>{
       const last=recs[recs.length-1];
-      const ia={...an,fecha:A.today(),notaProfe:nota,vs:recs.length>1?recs[0].id:null};
+      const ia={...an,fecha:A.today(),notaProfe:nota,vs:recs.length>1?recs[0].id:null,momentos:(iaCtx&&iaCtx.ts)||[]};
       await A.save('videos',{...(S.videos.find(x=>x.id===last.id)||last),ia});toast('Análisis guardado en el video');onSaved&&onSaved(ia);
     });
   }catch(e){w.end();dialogIA(`<div class="note">No se pudo preparar el análisis (${esc(String((e&&e.message)||e))}). Revisa tu internet e intenta de nuevo.</div>`)}
@@ -718,7 +797,7 @@ async function openViewer(arg){
       case 'clear':panes.forEach(P=>{P.shapes=[];P.cur=null});redrawAll();break;
       case 'mark':{pause();const i=+b.dataset.i;imp[i]=Vs[i].currentTime;await patch(i,{impacto:Math.round(imp[i]*100)/100});t=Vs[0].currentTime-imp[0];setT(t);break}
       case 'ia':analizar(recs,ia=>{recs[recs.length-1]={...recs[recs.length-1],ia};drawInfo()});break;
-      case 'ia-ver':{const r=recs[recs.length-1];if(r.ia){const al=A.alumno&&A.alumno(r.alumnoId);iaTit='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+(r.ia.fecha||A.today());iaHab='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' de '+String(al.nombre).split(' ')[0]:'')}if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
+      case 'ia-ver':{const r=recs[recs.length-1];if(r.ia){const al=A.alumno&&A.alumno(r.alumnoId);iaTit='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+(r.ia.fecha||A.today());iaHab='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' de '+String(al.nombre).split(' ')[0]:'');iaCtx={ia:r.ia,rec:r,fotos:null,ts:r.ia.momentos&&r.ia.momentos.length?r.ia.momentos:null}}if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
       case 'cmp':{const al=recs[0].alumnoId,id=recs[0].id;dispose();sheetComparar(al,id);break}
       case 'del':{
         if(ui.armed!=='vdel'){ui.armed='vdel';b.textContent='Toca otra vez para borrar';return}
