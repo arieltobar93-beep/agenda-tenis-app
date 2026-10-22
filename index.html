@@ -264,8 +264,8 @@ table.hist .neg{color:var(--bad)}
 </header>
 <main><div class="wrap" id="view"></div></main>
 <button class="fab" id="fab">+ Clase</button>
-<div id="modal"></div>
 </div>
+<div id="modal"></div>
 <div id="toast" class="toast" hidden></div>
 
 <script>
@@ -508,6 +508,8 @@ async function loadForUser(u){
   user={id:u.id,email:u.email||(user&&user.id===u.id?user.email:'')};cloud=true;mode='local';
   store.set('tenis-last-user',JSON.stringify(user));
   if(first&&!readJSON(kData(u.id)))showAuth('loading','Cargando tu agenda…');
+  // Etapa 1a: cuentas de jugador (jugador.js). Si la cuenta es de jugador, ahí termina; los profes siguen igual.
+  if(window.TAJ){let seguir=true;try{seguir=await window.TAJ.antesDeCargar(u)}catch(_){}if(!user||user.id!==u.id||!seguir)return}
   await checkSub(u);
   if(!user||user.id!==u.id)return;
   if(!sub.activo){showAuth('blocked');return}
@@ -1201,11 +1203,13 @@ document.addEventListener('submit',async e=>{
   }catch(_){}
 });
 window.TA={S,ui,save,removeDoc,esc,uid,toast,sheet,closeSheet,render,alumno,today,parse,addDays,clp,dayName,
-  sb:()=>sb,user:()=>user,isCloud:()=>!!(cloud&&user),sub:()=>sub,setSync,persist:persistLocal};
+  sb:()=>sb,user:()=>user,isCloud:()=>!!(cloud&&user),sub:()=>sub,setSync,persist:persistLocal,
+  showAuth,continuar:u=>loadForUser(u)};
 init();
 })();
 </script>
 <script src="perfil.js"></script>
+<script src="jugador.js"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}))}</script>
 </body>
 </html>
