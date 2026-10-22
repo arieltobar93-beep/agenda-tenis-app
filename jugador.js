@@ -1,4 +1,4 @@
-/* Agenda de Tenis · cuentas de jugador y apoderado (etapa 1a).
+/* Setly · cuentas de jugador y apoderado (etapa 1a).
    Al iniciar sesión pregunta si la cuenta es de profe o de jugador. Los profes siguen a su agenda
    como siempre; los jugadores ven su espacio con el código personal (TEN-XXXX) de cada jugador.
    Usa la API que index.html publica en window.TA y necesita el script sql/etapa1a-perfiles-jugadores.sql. */
@@ -86,7 +86,7 @@ async function antesDeCargar(u){
 }
 
 /* ---------- pantallas de entrada ---------- */
-function cuerpo(html){A.showAuth('loading');document.getElementById('auth-body').innerHTML=html}
+function cuerpo(html){A.showAuth('loading');document.getElementById('auth').classList.remove('splash');document.getElementById('auth-body').innerHTML=html}
 function mostrarRol(){
   cuerpo(`<div class="auth-card"><h2>¡Bienvenido!</h2>
    <p class="muted" style="margin:0">Cuéntanos cómo vas a usar la app. Esta elección no se puede cambiar después.</p>
@@ -120,7 +120,7 @@ function formJugador(){
 /* ---------- espacio del jugador ---------- */
 function edad(f){if(!f)return null;const n=parse(f),h=parse(today());let e=h.getFullYear()-n.getFullYear();if(h<new Date(h.getFullYear(),n.getMonth(),n.getDate()))e--;return e}
 const iniciales=n=>String(n||'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
-const codigoTxt=j=>`Hola profe! Mi código de jugador en Agenda de Tenis es ${j.codigo}${j.es_titular?'':' ('+j.nombre+')'}. Conéctame desde mi ficha de alumno.`;
+const codigoTxt=j=>`Hola profe! Mi código de jugador en Setly es ${j.codigo}${j.es_titular?'':' ('+j.nombre+')'}. Conéctame desde mi ficha de alumno.`;
 function mostrarJugador(aviso){
   const nom=String((J.perfil&&J.perfil.nombre)||'').split(' ')[0];
   let h=`<div class="jug"><div class="jug-head"><h2>Hola${nom?', '+esc(nom):''}</h2><p class="muted">Este es tu espacio de jugador. Comparte el código de cada jugador con su profe para conectarse.</p></div>`;

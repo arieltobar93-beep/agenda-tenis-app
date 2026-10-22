@@ -1,4 +1,4 @@
-/* Agenda de Tenis · perfil del alumno, evaluaciones, videos, comparador e IA.
+/* Setly · perfil del alumno, evaluaciones, videos, comparador e IA.
    Usa la API que index.html publica en window.TA. */
 (function(){
 'use strict';
@@ -554,7 +554,7 @@ const doc=new J({unit:'mm',format:'a4'});const W=210,M=14,LIM=282;
 const limpia=t=>String(t==null?'':t).replace(/[^\x20-\x7E\xA0-\xFF–—‘’“”•…]/g,'');
 const ia=o.ia||{};let y=0;
 doc.setFillColor(31,90,138);doc.rect(0,0,W,24,'F');
-doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Agenda de Tenis',M,11);
+doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('Setly',M,11);
 doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(limpia('Análisis de técnica con IA'),M,18);
 const partes=String(o.titulo||'Análisis de tu golpe').split(' · ');
 let tit=partes[0];tit=tit.charAt(0).toUpperCase()+tit.slice(1);if(partes[1])tit+=' - '+partes[1];
