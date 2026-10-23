@@ -62,6 +62,10 @@ const st=document.createElement('style');st.id='jstyle';st.textContent=`
 .mt .chs{display:flex;flex-wrap:wrap;gap:6px}
 .mt .chs span{background:var(--info-bg);color:var(--court);border-radius:99px;padding:4px 10px;font-size:12.5px;font-weight:600}
 .auth .mt .btn{width:auto;padding:6px 12px;font-size:13px}
+.mt .mtar{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px dashed var(--line)}
+.mt .mtar:first-of-type{border-top:0;padding-top:2px}
+.mt .mtar b{font-size:15px}.mt .mtar .det{font-size:13.5px;white-space:pre-line}
+.auth .mt .btn.hecha{background:var(--ok-bg);color:var(--ok);border-color:transparent}
 .auth .jcard .btn.mtbtn{width:100%;padding:10px 12px;font-size:15px}
 `;document.head.appendChild(st);
 
@@ -181,7 +185,7 @@ function mostrarJugador(aviso){
     </article>`;
   }
   h+=`<div class="jfoot">${J.jugadores.length?`<button class="btn" data-act="jug-add">+ Agregar otro jugador</button>`:''}<button class="btn" data-act="jug-cuenta">Mi cuenta</button></div>
-   <section class="pronto"><span class="jlbl">Próximamente en tu app</span><div class="chips"><span>Videos y comentarios del profe</span><span>Tareas y ejercicios</span><span>Análisis con IA</span><span>Torneos y logros</span></div></section></div>`;
+   <section class="pronto"><span class="jlbl">Próximamente en tu app</span><div class="chips"><span>Videos y comentarios del profe</span><span>Análisis con IA</span><span>Torneos y logros</span></div></section></div>`;
   cuerpo(h);
 }
 /* ---------- Mi tenis (etapa 2, parte 3) ---------- */
@@ -210,6 +214,14 @@ async function mostrarMiTenis(jid){
       :`<div class="card"><span class="jlbl">Próxima clase</span><span class="muted">No hay clases agendadas por ahora.</span></div>`;
     const f=d.ficha||{};
     if(f.foco&&f.foco.length)h+=`<div class="card foco"><span class="jlbl">Estamos trabajando</span><ol>${f.foco.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`;
+    // Tareas
+    const TK=Array.isArray(c.tareas)?c.tareas:[],PR=Array.isArray(c.practicas)?c.practicas:[];
+    if(TK.length){const hoy=today();
+      h+=`<div class="card"><span class="jlbl">Tus tareas</span>${TK.map(t=>{const mias=PR.filter(x=>x.tarea===t.id),hecha=mias.some(x=>x.fecha===hoy);
+        return `<div class="mtar"><b>${esc(t.titulo)}</b>${t.detalle?`<div class="det">${esc(t.detalle)}</div>`:''}
+         <div class="jfoot">${t.link?`<a class="btn" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
+          <button class="btn ${hecha?'hecha':'primary'}" data-act="mt-prac" data-id="${esc(c.id)}" data-t="${esc(t.id)}" data-v="${hecha?'0':'1'}">${hecha?'✓ Practicado hoy':'Lo practiqué hoy'}</button></div>
+         <span class="muted" style="font-size:12.5px">${mias.length?`Llevas ${mias.length} ${mias.length===1?'práctica':'prácticas'}`:'Aún no la practicas'}${hecha?' · toca de nuevo para deshacer':''}</span></div>`}).join('')}</div>`}
     // Test Setly
     if(Array.isArray(d.tests)&&d.tests.length&&window.TAT){
       const al={tests:d.tests.map((t,i)=>({id:'t'+i,p:t.p,v:+t.v,fecha:t.fecha}))};
@@ -225,7 +237,7 @@ async function mostrarMiTenis(jid){
     if(f.mental)h+=`<div class="card"><span class="jlbl">Cabeza</span><div>${esc(f.mental)}</div></div>`;
     h+=`<div class="card"><span class="jlbl">Clases</span><div><b>${d.realizadas||0}</b> clases realizadas${d.ultimas&&d.ultimas.length?` · última el ${esc(fCorta(d.ultimas[0]))}`:''}</div></div>`;
   }
-  h+=`<section class="pronto"><span class="jlbl">Próximamente</span><div class="chips"><span>Videos y comentarios del profe</span><span>Tareas y ejercicios</span><span>Torneos y logros</span></div></section></div>`;
+  h+=`<section class="pronto"><span class="jlbl">Próximamente</span><div class="chips"><span>Videos y comentarios del profe</span><span>Torneos y logros</span></div></section></div>`;
   cuerpo(h);
 }
 function sheetJugador(j){
@@ -266,6 +278,11 @@ document.addEventListener('click',async e=>{
     case 'jug-add':sheetJugador();break;
     case 'mt-ver':mostrarMiTenis(id);break;
     case 'mt-volver':J.mt=null;mostrarJugador();break;
+    case 'mt-prac':{if(b.disabled)break;b.disabled=true;
+      const {error}=await sb().rpc('marcar_practica',{p_conexion:id,p_tarea:b.dataset.t,p_hecho:b.dataset.v==='1'});
+      if(error){b.disabled=false;toast('No se pudo guardar. Revisa tu conexión.');break}
+      if(b.dataset.v==='1')toast('¡Bien! Tu profe verá que practicaste');
+      const y=window.scrollY;await mostrarMiTenis(J.mt);window.scrollTo(0,y);break}
     case 'jug-edit':sheetJugador(J.jugadores.find(x=>x.id===id));break;
     case 'jug-cuenta':sheetCuenta();break;
     case 'con-aceptar':case 'con-rechazar':{

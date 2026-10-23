@@ -147,5 +147,5 @@ document.addEventListener('submit',async e=>{
 },true);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&T.cargado&&A.isCloud())recargar()});
 
-window.TAC={seccion,ajustesHtml,recargar,_rutValido:rutValido};
+window.TAC={seccion,ajustesHtml,recargar,conectado:id=>!!(T.conex||[]).find(x=>x.alumno_id===id&&x.estado==='aceptada'),_rutValido:rutValido};
 })();

@@ -176,6 +176,7 @@ function vPerfil(id){
   // ficha técnica (ficha.js)
   if(window.TAF)h+=window.TAF.seccion(id);
   if(window.TAT)h+=window.TAT.seccion(id);
+  if(window.TAK)h+=window.TAK.seccion(id);
   // evaluaciones
   h+=`<section class="xp"><div class="sec-h"><h3>Evaluaciones</h3><button class="btn small primary" data-xact="eval-new" data-id="${esc(id)}">+ Evaluar</button></div>`;
   if(!E.length)h+=`<div class="note">Evalúa del 1 al 5 la derecha, el revés, el saque, la volea y la movilidad. Con el tiempo verás el progreso en un gráfico.</div>`;
