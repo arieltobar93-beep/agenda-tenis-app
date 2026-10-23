@@ -175,6 +175,7 @@ function vPerfil(id){
   ${cs.desde?`<span class="muted" style="font-size:12.5px;text-align:center">Entrena contigo desde ${esc(fmtF(cs.desde))}${cs.ultima?' · última clase '+esc(fmtF(cs.ultima)):''}</span>`:''}</div>`;
   // ficha técnica (ficha.js)
   if(window.TAF)h+=window.TAF.seccion(id);
+  if(window.TAT)h+=window.TAT.seccion(id);
   // evaluaciones
   h+=`<section class="xp"><div class="sec-h"><h3>Evaluaciones</h3><button class="btn small primary" data-xact="eval-new" data-id="${esc(id)}">+ Evaluar</button></div>`;
   if(!E.length)h+=`<div class="note">Evalúa del 1 al 5 la derecha, el revés, el saque, la volea y la movilidad. Con el tiempo verás el progreso en un gráfico.</div>`;

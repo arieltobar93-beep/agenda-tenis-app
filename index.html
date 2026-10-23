@@ -854,6 +854,7 @@ function sheetClase(c){
     ${S.clubes.length?`<div class="field"><label for="c-club">Club / cancha</label><select id="c-club"><option value="">Sin club</option>${S.clubes.map(k=>`<option value="${esc(k.id)}" ${c.clubId===k.id?'selected':''}>${esc(k.nombre)} · ${clp(k.costoHora)}/h</option>`).join('')}</select></div>`:`<input type="hidden" id="c-club" value="">`}
     <div class="field"><span>Alumnos</span>${S.alumnos.length>=5?`<input id="c-q" type="search" placeholder="Buscar alumno…" autocomplete="off" aria-label="Buscar alumno">`:''}<div class="checks">${checks}</div></div>
     ${isNew?'':confirmWA(c)}
+    ${isNew||!window.TAT?'':window.TAT.claseHtml(c)}
     ${isNew?'':`<div class="field"><span>Estado</span><div class="states">${Object.entries(ESTADOS).map(([k,v])=>`<button type="button" data-act="set-estado" data-v="${k}" aria-pressed="${c.estado===k}"><b>${v.t}</b><span>${v.d}</span></button>`).join('')}</div></div>`}
     <input type="hidden" id="c-estado" value="${c.estado}">
     <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger${ui.armed===c.id?' armed':''}" data-act="del-clase" data-id="${esc(c.id)}">${ui.armed===c.id?'Toca otra vez para borrar':'Borrar'}</button>`}
@@ -1239,6 +1240,7 @@ init();
 </script>
 <script src="perfil.js"></script>
 <script src="ficha.js"></script>
+<script src="test.js"></script>
 <script src="jugador.js"></script>
 <script src="planes.js"></script>
 <script src="conexion.js"></script>
