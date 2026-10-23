@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Setly · Administración</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0e2d4a">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+/* Panel de una columna: arriba los números del negocio, luego profes por revisar y la lista de profes con su plan */
+:root{
+  --bg:#f2f5f8; --surface:#ffffff; --ink:#13202b; --muted:#5b6977; --line:#d8e0e7;
+  --navy:#0e2d4a; --lime:#d7e937; --lime-ink:#1d2a06;
+  --ok:#2e7a4d; --ok-bg:#e3f2e9; --warn:#9a6411; --warn-bg:#fbf0dc; --bad:#b3392b; --bad-bg:#fbe5e2;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0b141c; --surface:#14202b; --ink:#e6ecf1; --muted:#93a2b0; --line:#26384a;
+  --ok:#6cc792; --ok-bg:#163527; --warn:#e6b45e; --warn-bg:#3a2c12; --bad:#f08a7c; --bad-bg:#41201c; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+[hidden]{display:none!important}
+header{background:var(--navy);color:#fff;border-bottom:3px solid #fff}
+header .in{max-width:860px;margin:0 auto;padding:14px max(16px,env(safe-area-inset-right,0px)) 14px max(16px,env(safe-area-inset-left,0px));display:flex;justify-content:space-between;align-items:center;gap:12px}
+header img{height:30px;width:auto;display:block}
+header span{font-family:var(--f-display);font-size:18px;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+main{max-width:860px;margin:0 auto;padding:18px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:16px}
+h2{font-family:var(--f-display);font-size:22px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;margin:6px 0 0}
+.muted{color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-weight:600;font-size:13.5px}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.lime{background:var(--lime);border-color:var(--lime);color:var(--lime-ink)}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.55;cursor:default}
+.hd .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.stat b{display:block;font-family:var(--f-display);font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.card.pend{border-color:var(--warn)}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.who{min-width:0}
+.who b{display:block;overflow-wrap:anywhere}
+.who span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.chip{font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.nada{background:var(--line);color:var(--muted)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.acts select,.acts input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px}
+.verif{background:var(--bg);border-radius:8px;padding:10px 12px;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.verif dt{color:var(--muted)}
+.verif dd{margin:0;overflow-wrap:anywhere}
+.uso{font-size:13px;font-variant-numeric:tabular-nums}
+.uso.bad{color:var(--bad);font-weight:600}
+input[type=search],input[type=email]{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 11px;width:100%}
+.login{max-width:420px;display:flex;flex-direction:column;gap:12px}
+.msg{background:var(--warn-bg);border-radius:8px;padding:10px 12px;font-size:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:14px;max-width:calc(100% - 32px)}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.top{flex-direction:column}.chips{justify-content:flex-start}}
+</style>
+</head>
+<body>
+<header><div class="in hd"><img src="icons/setly-logo.png" alt="Setly" width="96" height="30"><span>Administración</span><button class="btn" id="out" hidden>Cerrar sesión</button></div></header>
+<main id="app"><p class="muted">Cargando…</p></main>
+<div class="toast" id="toast" hidden></div>
+<script>
+(function(){
+const C=window.APP_CONFIG||{};const app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fecha=f=>f?new Date(f).toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'}).replace('.',''):'';
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>el.hidden=true,2600)}
+if(!C.supabaseUrl||!window.supabase){app.innerHTML='<div class="msg">Falta configurar Supabase en config.js, o no hay internet.</div>';return}
+const sb=window.supabase.createClient(C.supabaseUrl,C.supabaseKey,{auth:{persistSession:true,detectSessionInUrl:true,flowType:'implicit'}});
+const PLANES=[['gratis','Gratis',3],['inicial','Inicial',10],['pro','Pro',30],['academia','Academia',100],['medida','A medida',100000]];
+let profes=[],resumen={},reportes=[],q='',user=null,armed=null;
+
+function vLogin(msg){
+  document.getElementById('out').hidden=true;
+  app.innerHTML=`<div class="login"><h2>Entrar</h2><p class="muted" style="margin:0">Usa la misma cuenta de administrador con la que entras a Setly.</p>
+   <button class="btn" id="g" style="padding:11px">Continuar con Google</button>
+   <form id="f" class="login"><input type="email" id="e" placeholder="Correo" autocomplete="email" required><button class="btn primary" type="submit">Enviarme un enlace para entrar</button></form>
+   ${msg?`<div class="msg">${esc(msg)}</div>`:''}</div>`;
+  const back=location.origin+location.pathname;
+  document.getElementById('g').onclick=()=>sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:back}});
+  document.getElementById('f').onsubmit=async e=>{e.preventDefault();const {error}=await sb.auth.signInWithOtp({email:document.getElementById('e').value.trim(),options:{emailRedirectTo:back,shouldCreateUser:false}});
+    vLogin(error?'No se pudo enviar el enlace: '+error.message:'Revisa tu correo y abre el enlace para entrar.')};
+}
+async function start(u){
+  user=u;document.getElementById('out').hidden=false;
+  try{if(location.hash.includes('access_token'))history.replaceState(null,'',location.pathname)}catch(_){}
+  const {data:isAdmin,error}=await sb.rpc('es_admin');
+  if(error){app.innerHTML=`<div class="msg">No encontré el script de planes en Supabase. Corre sql/etapa1bc-planes-verificacion-conexion.sql.</div>`;return}
+  if(!isAdmin){app.innerHTML=`<div class="msg">La cuenta ${esc(u.email)} no es administradora. Agrégala con la última línea del script SQL.</div>`;return}
+  await load();
+}
+async function load(){
+  const [a,b,c]=await Promise.all([sb.rpc('admin_profes'),sb.rpc('admin_resumen'),sb.rpc('admin_reportes')]);
+  if(a.error){app.innerHTML=`<div class="msg">No se pudo cargar: ${esc(a.error.message)}</div>`;return}
+  profes=a.data||[];resumen=b.data||{};reportes=c.data||[];render();
+}
+function estadoPlan(p){
+  if(p.tipo==='prueba')return ['warn','Prueba hasta '+fecha(p.fin)];
+  if(p.tipo==='plan'){const d=Math.round((new Date(p.fin)-Date.now())/864e5);return [d<=5?'warn':'ok',(p.plan_asignado?'':'Sin plan asignado · ')+'Pagado hasta '+fecha(p.fin)]}
+  return ['nada','Gratis'];
+}
+const nombrePlan=id=>(PLANES.find(x=>x[0]===id)||[id,id])[1];
+const maxPlan=id=>(PLANES.find(x=>x[0]===id)||[0,0,3])[2];
+function card(p){
+  const [k,txt]=estadoPlan(p),lim=maxPlan(p.plan),exc=p.alumnos>lim;
+  const v=p.verif_estado;
+  const vchip=v==='aprobado'?'<span class="chip ok">✓ Verificado</span>':v==='pendiente'?'<span class="chip warn">Verificación pendiente</span>':v==='rechazado'?'<span class="chip bad">Verificación rechazada</span>':'<span class="chip nada">Sin verificar</span>';
+  let h=`<div class="card${v==='pendiente'?' pend':''}" data-u="${esc(p.user_id)}">
+   <div class="top"><div class="who"><b>${esc(p.nombre||p.verif_nombre||p.email)}</b><span>${esc(p.email||'')}${p.telefono?' · '+esc(p.telefono):''} · desde ${fecha(p.creado)}</span></div>
+   <div class="chips"><span class="chip ${k}">${esc(nombrePlan(p.plan))} · ${esc(txt)}</span>${vchip}</div></div>
+   <div class="uso${exc?' bad':''}">${p.alumnos} alumnos activos de ${lim>=100000?'∞':lim}${exc?' · supera su plan (no puede guardar cambios)':''}</div>`;
+  if(v){
+    h+=`<dl class="verif"><dt>Nombre</dt><dd>${esc(p.verif_nombre)}</dd><dt>RUT</dt><dd>${esc(p.verif_rut)}</dd><dt>Club</dt><dd>${esc(p.verif_club)}</dd>
+     ${p.verif_instagram?`<dt>Redes</dt><dd>${esc(p.verif_instagram)}</dd>`:''}<dt>Documento</dt><dd><button class="btn" data-a="doc" data-p="${esc(p.verif_doc)}">Ver documento</button></dd>
+     <dt>Enviado</dt><dd>${fecha(p.verif_enviado)}${p.verif_motivo?' · motivo de rechazo: '+esc(p.verif_motivo):''}</dd></dl>`;
+    h+=`<div class="acts">${v!=='aprobado'?`<button class="btn lime" data-a="aprobar">Aprobar verificación</button>`:''}<input data-motivo placeholder="Motivo si rechazas" maxlength="200" style="flex:1;min-width:160px"><button class="btn danger" data-a="rechazar">${v==='aprobado'?'Quitar verificación':'Rechazar'}</button></div>`;
+  }
+  h+=`<div class="acts"><select data-plan aria-label="Plan">${PLANES.map(([id,n])=>`<option value="${id}" ${(p.plan_asignado||p.plan)===id?'selected':''}>${n}</option>`).join('')}</select>
+    <button class="btn primary" data-a="mes" data-m="1">+1 mes</button><button class="btn" data-a="mes" data-m="3">+3 meses</button><button class="btn" data-a="mes" data-m="12">+12 meses</button>
+    <button class="btn danger" data-a="cortar">${armed===p.user_id?'Toca otra vez':'Volver a Gratis'}</button></div></div>`;
+  return h;
+}
+function render(){
+  const pag=profes.filter(p=>p.tipo==='plan').length,pru=profes.filter(p=>p.tipo==='prueba').length,pen=profes.filter(p=>p.verif_estado==='pendiente');
+  const list=profes.filter(p=>!q||[p.email,p.nombre,p.verif_nombre,p.verif_club].some(x=>String(x||'').toLowerCase().includes(q)));
+  app.innerHTML=`<div class="stats"><div class="stat"><span>Pagando</span><b>${pag}</b></div><div class="stat"><span>En prueba</span><b>${pru}</b></div>
+   <div class="stat"><span>Jugadores</span><b>${resumen.jugadores||0}</b></div><div class="stat"><span>Conexiones</span><b>${resumen.conexiones||0}</b></div></div>
+   ${pen.length?`<h2>Por verificar (${pen.length})</h2>${pen.map(card).join('')}`:''}
+   ${reportes.filter(r=>!r.revisado).length?`<h2>Reportes</h2>${reportes.filter(r=>!r.revisado).map(r=>`<div class="card"><div class="top"><div class="who"><b>Sobre ${esc(r.profe)}</b><span>De ${esc(r.autor)} · ${fecha(r.creado)}</span></div><button class="btn" data-a="visto" data-r="${esc(r.id)}">Marcar revisado</button></div><div>${esc(r.motivo)}</div></div>`).join('')}`:''}
+   <h2>Profes (${profes.length})</h2>
+   <input type="search" id="q" placeholder="Buscar por nombre, correo o club…" value="${esc(q)}" aria-label="Buscar profe">
+   ${list.length?list.filter(p=>p.verif_estado!=='pendiente').map(card).join(''):'<p class="muted">Aún no hay profes. Aparecen aquí apenas crean su cuenta.</p>'}`;
+  const qi=document.getElementById('q');qi.oninput=()=>{q=qi.value.toLowerCase().trim();const pos=qi.selectionStart;render();const n=document.getElementById('q');n.focus();n.setSelectionRange(pos,pos)};
+}
+async function run(rpc,args,msg){
+  const {error}=await sb.rpc(rpc,args);if(error){toast('No se pudo: '+error.message);return}
+  toast(msg);await load();
+}
+app.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a;
+  if(a==='visto'){run('admin_reporte_revisado',{p_id:b.dataset.r},'Reporte revisado');return}
+  const card=b.closest('.card');const u=card&&card.dataset.u;const p=profes.find(x=>x.user_id===u);if(!p)return;
+  if(a!=='cortar')armed=null;
+  if(a==='doc'){
+    const w=window.open('','_blank');
+    const {data,error}=await sb.storage.from('verificaciones').createSignedUrl(b.dataset.p,600);
+    if(error||!data){if(w)w.close();toast('No se pudo abrir el documento');return}
+    if(w)w.location=data.signedUrl;else location.href=data.signedUrl;return;
+  }
+  if(a==='aprobar'){run('admin_verificar',{p_user:u,p_aprobar:true,p_motivo:null},'Profe verificado');return}
+  if(a==='rechazar'){const m=card.querySelector('[data-motivo]').value.trim();if(!m){toast('Escribe el motivo para que el profe sepa qué corregir');return}
+    run('admin_verificar',{p_user:u,p_aprobar:false,p_motivo:m},'Verificación rechazada');return}
+  if(a==='mes'){
+    const plan=card.querySelector('[data-plan]').value;
+    const base=p.plan_until&&new Date(p.plan_until)>new Date()?new Date(p.plan_until):new Date();
+    base.setMonth(base.getMonth()+(+b.dataset.m));
+    run('admin_set_plan',{p_user:u,p_plan:plan,p_hasta:base.toISOString()},'Plan '+nombrePlan(plan)+' activo hasta el '+fecha(base));return;
+  }
+  if(a==='cortar'){
+    if(armed!==u){armed=u;b.textContent='Toca otra vez';return}
+    armed=null;run('admin_set_plan',{p_user:u,p_plan:null,p_hasta:new Date(Date.now()-864e5).toISOString()},'Volvió al plan Gratis');
+  }
+});
+document.getElementById('out').onclick=async()=>{await sb.auth.signOut();user=null;vLogin()};
+sb.auth.onAuthStateChange((ev,s)=>{if(s&&s.user&&(!user||user.id!==s.user.id))setTimeout(()=>start(s.user),0)});
+sb.auth.getSession().then(({data})=>{if(data&&data.session){if(!user)start(data.session.user)}else vLogin()});
+})();
+</script>
+</body>
+</html>
