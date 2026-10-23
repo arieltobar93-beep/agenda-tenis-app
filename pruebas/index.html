@@ -822,6 +822,26 @@ function msgConfirmar(a,c){
   const k=club(c.clubId), firma=cfg().nombre?'\n'+cfg().nombre:'';
   return `Hola ${nom}! Te escribo para confirmar tu clase de tenis ${cuandoTxt(c.fecha)} a las ${c.hora}${k?' en '+k.nombre.replace(/^Ejemplo:\s*/,''):''}. ¿Me confirmas? 🎾${firma}`;
 }
+function msgAgendada(a,fechas,hora,clubId){
+  const nom=String(a.nombre||'').replace(/^Ejemplo:\s*/,'').split(' ')[0];
+  const k=club(clubId),en=k?' en '+k.nombre.replace(/^Ejemplo:\s*/,''):'',firma=cfg().nombre?'\n'+cfg().nombre:'';
+  const corta=f=>{try{return parse(f).toLocaleDateString('es-CL',{weekday:'short',day:'numeric',month:'short'}).replace(/\./g,'').replace(',','')}catch(_){return f}};
+  let t=fechas.length===1?`Hola ${nom}! Tu próxima clase de tenis quedó agendada para ${cuandoTxt(fechas[0])} a las ${hora}${en}. ¡Nos vemos! 🎾`
+    :`Hola ${nom}! Quedaron agendadas tus próximas ${fechas.length} clases de tenis, a las ${hora}${en}: ${fechas.map(corta).join(', ')}. ¡Nos vemos! 🎾`;
+  if(window.TAC&&window.TAC.conectado&&window.TAC.conectado(a.id)){const u=(window.TAK&&window.TAK.APP)?window.TAK.APP():location.origin+location.pathname;t+=`\nLas ves en tu app Setly y puedes agregarlas a tu calendario: ${u}`}
+  return t+firma;
+}
+async function sheetAgendada(ids,fechas,hora,clubId){
+  if(window.TAC&&window.TAC.recargar&&cloud&&user){try{await Promise.race([window.TAC.recargar(),new Promise(r=>setTimeout(r,2500))])}catch(_){}}
+  const als=ids.map(alumno).filter(Boolean);
+  const con=als.filter(a=>waUrl(a.telefono,'x')),sin=als.filter(a=>!waUrl(a.telefono,'x'));
+  const nom=a=>esc(String(a.nombre).replace(/^Ejemplo:\s*/,''));
+  sheet(`<h2>${fechas.length>1?fechas.length+' clases agendadas':'Clase agendada'} ✓</h2>
+   <p class="muted" style="margin:0">${esc(cuandoTxt(fechas[0]).replace(/^./,x=>x.toUpperCase()))} a las ${esc(hora)}${fechas.length>1?' y las semanas siguientes':''}. ¿Le avisas ${als.length>1?'a tus alumnos':'a tu alumno'}?</p>
+   ${con.length?`<div style="display:flex;flex-direction:column;gap:8px">${con.map(a=>`<a class="btn wa" href="${esc(waUrl(a.telefono,msgAgendada(a,fechas,hora,clubId)))}" target="_blank" rel="noopener">📲 Avisar a ${nom(a)}</a>`).join('')}</div>`:''}
+   ${sin.length?`<p class="muted" style="margin:0;font-size:13px">Sin WhatsApp guardado: ${sin.map(nom).join(', ')}. Agrégalo en la ficha del alumno.</p>`:''}
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn primary" data-act="close">Listo</button></div></div>`);
+}
 function confirmWA(c){
   const als=(c.alumnoIds||[]).map(alumno).filter(Boolean);if(!als.length)return '';
   const con=als.filter(a=>waUrl(a.telefono,'x')), sin=als.filter(a=>!waUrl(a.telefono,'x'));
@@ -1223,8 +1243,9 @@ document.addEventListener('submit',async e=>{
     ui.lastClub=base.clubId;
     if(f.dataset.new==='true'){
       const n=+v('c-rep')||1;closeSheet();
-      for(let i=0;i<n;i++)await save('clases',{...base,id:uid(),fecha:addDays(base.fecha,7*i),estado:'agendada'});
-      toast(n>1?`${n} clases agendadas`:'Clase agendada');
+      const fechas=[];
+      for(let i=0;i<n;i++){const fe=addDays(base.fecha,7*i);fechas.push(fe);await save('clases',{...base,id:uid(),fecha:fe,estado:'agendada'})}
+      sheetAgendada(ids,fechas,base.hora,base.clubId);
     }else{closeSheet();await save('clases',{...base,id:f.dataset.id});toast('Clase guardada')}
   }
   if(f.id==='f-alumno'){
