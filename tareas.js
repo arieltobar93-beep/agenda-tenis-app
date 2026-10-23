@@ -25,6 +25,9 @@ a.btn.small{text-decoration:none}
 const lista=a=>(a&&Array.isArray(a.tareas)?a.tareas:[]).filter(Boolean);
 const limpio=n=>String(n||'').replace(/^Ejemplo:\s*/,'');
 const fmtF=f=>{try{return A.dayName(f)}catch(_){return f}};
+const APP=()=>{const c=window.APP_CONFIG||{};return c.appUrl||(location.origin+location.pathname.replace(/index\.html$/,''))};
+function wa(tel,msg){let d=String(tel||'').replace(/\D/g,'');if(!d)return '';if(d.length===9&&d[0]==='9')d='56'+d;return 'https://wa.me/'+d+'?text='+encodeURIComponent(msg)}
+const msgTarea=(a,t)=>`Hola ${limpio(a.nombre).split(' ')[0]}! Te dejé una tarea nueva en Setly: *${t.titulo}*${t.detalle?'\n'+t.detalle:''}\nÁbrela en tu app y marca cuando la practiques 💪 ${APP()}`;
 const linkOk=u=>/^https?:\/\/\S+\.\S+/i.test(u||'');
 const tipoLink=u=>/youtu\.?be/i.test(u)?'YouTube':/instagram\./i.test(u)?'Instagram':/tiktok\./i.test(u)?'TikTok':/drive\.google|docs\.google/i.test(u)?'Drive':'el link';
 
@@ -47,7 +50,7 @@ function tarjeta(a,t){
    <span class="meta">Asignada ${esc(fmtF(t.creada))}${t.estado==='cerrada'?' · terminada':''}</span>${t.estado==='cerrada'?'':prac}
    <div class="acc">${t.link?`<a class="btn small" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
     ${t.estado==='cerrada'?`<button class="btn small ghost" data-kact="reabrir" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Reactivar</button>`
-      :`<button class="btn small ghost" data-kact="editar" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Editar</button><button class="btn small ghost" data-kact="cerrar" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Terminar</button>`}</div></div>`;
+      :`${wa(a.telefono,'x')?`<a class="btn small wa" href="${esc(wa(a.telefono,msgTarea(a,t)))}" target="_blank" rel="noopener">📲 Avisar</a>`:''}<button class="btn small ghost" data-kact="editar" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Editar</button><button class="btn small ghost" data-kact="cerrar" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Terminar</button>`}</div></div>`;
 }
 function seccion(id){
   const a=A.alumno(id);if(!a)return '';
@@ -105,6 +108,14 @@ document.addEventListener('click',async e=>{
     case 'ver-cer':T.verCerradas[id]=!T.verCerradas[id];A.render();break;
   }
 });
+function avisar(hechos){
+  if(!hechos.length)return;
+  const con=hechos.filter(([a])=>wa(a.telefono,'x')),sin=hechos.filter(([a])=>!wa(a.telefono,'x'));
+  A.sheet(`<h2>Tarea asignada ✓</h2><p class="muted" style="margin:0">${hechos.length>1?`Quedó en la app de ${hechos.length} alumnos.`:'Ya está en su app.'} Avísales por WhatsApp para que la vean:</p>
+   ${con.length?`<div style="display:flex;flex-direction:column;gap:8px">${con.map(([a,t])=>`<a class="btn wa" href="${esc(wa(a.telefono,msgTarea(a,t)))}" target="_blank" rel="noopener">📲 Avisar a ${esc(limpio(a.nombre))}</a>`).join('')}</div>`:''}
+   ${sin.length?`<p class="muted" style="margin:0;font-size:13px">Sin WhatsApp guardado: ${sin.map(([a])=>esc(limpio(a.nombre))).join(', ')}. Agrégalo en "Editar datos" del alumno.</p>`:''}
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn primary" data-act="close">Listo</button></div></div>`);
+}
 document.addEventListener('submit',async e=>{
   const f=e.target;if(f.id!=='f-tarea')return;
   e.preventDefault();
@@ -118,12 +129,13 @@ document.addEventListener('submit',async e=>{
   try{
     if(tid){await cambiar(id,tid,{titulo,detalle,link});toast('Tarea guardada');return}
     const ids=[id,...[...f.querySelectorAll('input[name=tk-al]:checked')].map(x=>x.value)];
-    let n=0;
+    const hechos=[];
     for(const aid of ids){const a=A.alumno(aid);if(!a)continue;
-      await A.save('alumnos',{...a,tareas:[...lista(a),{id:uid(),titulo,detalle,link,creada:A.today(),estado:'activa'}]});n++}
-    toast(n>1?`Tarea asignada a ${n} alumnos`:'Tarea asignada');
+      const t={id:uid(),titulo,detalle,link,creada:A.today(),estado:'activa'};
+      await A.save('alumnos',{...a,tareas:[...lista(a),t]});hechos.push([A.alumno(aid)||a,t])}
+    avisar(hechos);
   }catch(_){}
 });
 
-window.TAK={seccion,tipoLink};
+window.TAK={seccion,tipoLink,wa,APP};
 })();

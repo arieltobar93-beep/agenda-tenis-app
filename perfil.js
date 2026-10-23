@@ -177,6 +177,7 @@ function vPerfil(id){
   if(window.TAF)h+=window.TAF.seccion(id);
   if(window.TAT)h+=window.TAT.seccion(id);
   if(window.TAK)h+=window.TAK.seccion(id);
+  if(window.TAR)h+=window.TAR.seccion(id);
   // evaluaciones
   h+=`<section class="xp"><div class="sec-h"><h3>Evaluaciones</h3><button class="btn small primary" data-xact="eval-new" data-id="${esc(id)}">+ Evaluar</button></div>`;
   if(!E.length)h+=`<div class="note">Evalúa del 1 al 5 la derecha, el revés, el saque, la volea y la movilidad. Con el tiempo verás el progreso en un gráfico.</div>`;
@@ -783,7 +784,9 @@ async function openViewer(arg){
     info.innerHTML=`<div style="font-size:12.5px;color:#9fb0bf">${esc(GOLPES[r.golpe]||'')} · ${esc(fmtF(r.fecha))}${r.angulo&&ANGULOS[r.angulo]?' · '+esc(ANGULOS[r.angulo]):''}${r.size?' · '+mb(r.size):''}</div>
     <textarea id="xv-nota" rows="2" placeholder="Nota sobre este video">${esc(r.nota||'')}</textarea>
     <button class="xb${r.compartido?' on':''}" data-v="share" style="align-self:flex-start">${r.compartido?'✓ Compartido con el alumno · dejar de compartir':'Compartir con el alumno'}</button>
-    ${r.compartido?`<span style="font-size:12px;color:#9fb0bf">Lo ve en su app junto a tu nota${r.ia?' y el análisis IA':''}.</span>`:''}
+    ${r.compartido?`<span style="font-size:12px;color:#9fb0bf">Lo ve en su app junto a tu nota${r.ia?' y el análisis IA':''}.</span>${(()=>{const al=A.alumno(r.alumnoId),T=window.TAK;if(!al||!T)return '';
+      const u=T.wa(al.telefono,`Hola ${String(al.nombre).replace(/^Ejemplo:\s*/,'').split(' ')[0]}! Te compartí un video de tu ${(GOLPES[r.golpe]||'golpe').toLowerCase()} con mis comentarios${r.ia?' y el análisis con IA':''} en Setly 🎾 Míralo en tu app: ${T.APP()}`);
+      return u?`<a class="xb" href="${esc(u)}" target="_blank" rel="noopener" style="align-self:flex-start;text-decoration:none">📲 Avisar por WhatsApp</a>`:''})()}`:''}
     <div class="r" style="display:flex;gap:6px;flex-wrap:wrap"><button class="xb pri" data-v="ia">Analizar con IA</button>${r.ia?'<button class="xb" data-v="ia-ver">Ver análisis guardado</button>':''}<button class="xb" data-v="cmp">Comparar con otro</button><button class="xb bad" data-v="del">Borrar</button></div>
     <span style="font-size:12px;color:#9fb0bf">Tip: pausa en el instante del impacto y toca “Marcar impacto”. Mejora la IA y alinea la comparación.</span>`;
   }
