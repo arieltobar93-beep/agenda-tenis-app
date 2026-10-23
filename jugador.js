@@ -76,6 +76,10 @@ const st=document.createElement('style');st.id='jstyle';st.textContent=`
 .mtv h4{margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .mtv ul{margin:0;padding-left:20px}
 .mtv .aviso{font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
+.mt details.kcat{border-top:1px dashed var(--line);padding-top:8px}
+.mt details.kcat:first-of-type{border-top:0;padding-top:0}
+.mt details.kcat summary{cursor:pointer;padding:4px 0;list-style:revert}
+.mt details.kcat .vgal{margin-top:8px}
 .nov{background:var(--info-bg);color:var(--court);border-radius:10px;padding:9px 12px;font-size:14px}
 .nov.cl{background:var(--surface);border:1px solid var(--ball);color:var(--ink)}
 .nuevo{display:inline-block;vertical-align:middle;background:var(--ball);color:var(--ball-ink);font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:99px;padding:1px 7px;margin-left:4px}
@@ -171,18 +175,19 @@ const codigoTxt=j=>`Hola profe! Mi código de jugador en Setly es ${j.codigo}${j
 const kVisto=jid=>'setly-visto-'+jid;
 function visto(jid){try{return JSON.parse(localStorage.getItem(kVisto(jid))||'null')}catch(_){return null}}
 function marcarVisto(jid,data){
-  const v={t:[],v:[]};for(const c of data||[]){for(const t of (c.tareas||[]))v.t.push(t.id);for(const x of (c.videos||[]))v.v.push(x.id)}
+  const v={t:[],v:[],k:[]};for(const c of data||[]){for(const t of (c.tareas||[]))v.t.push(t.id);for(const x of (c.videos||[]))v.v.push(x.id);for(const k of (c.clases||[]))v.k.push(k.id)}
   try{localStorage.setItem(kVisto(jid),JSON.stringify(v))}catch(_){}
 }
 function resumenNov(jid,data){
-  const v=visto(jid)||{t:[],v:[]};let tareas=0,videos=0,prox=null;
+  const v=visto(jid)||{t:[],v:[]};let tareas=0,videos=0,clases=0,prox=null;
   for(const c of data||[]){
     tareas+=(c.tareas||[]).filter(t=>!v.t.includes(t.id)).length;
     videos+=(c.videos||[]).filter(x=>!v.v.includes(x.id)).length;
+    if(v.k)clases+=(c.clases||[]).filter(k=>k.lista&&!v.k.includes(k.id)).length;
     const p=c.datos&&c.datos.proximas&&c.datos.proximas[0];
     if(p&&(!prox||(p.fecha+p.hora)<(prox.fecha+prox.hora)))prox={...p,profe:c.profe};
   }
-  return {tareas,videos,prox};
+  return {tareas,videos,clases,prox};
 }
 async function cargarNovedades(){
   const con=J.jugadores.filter(j=>J.conex.some(c=>c.jugador_id===j.id&&c.estado==='aceptada'));
@@ -193,14 +198,14 @@ async function cargarNovedades(){
   if(JSON.stringify(J.nov)!==antes&&J.visible&&!J.mt&&!document.querySelector('#modal .sheet'))mostrarJugador();
 }
 function badge(){
-  const n=Object.values(J.nov).reduce((s,x)=>s+x.tareas+x.videos,0);
+  const n=Object.values(J.nov).reduce((s,x)=>s+x.tareas+x.videos+(x.clases||0),0);
   try{if(navigator.setAppBadge){n?navigator.setAppBadge(n):navigator.clearAppBadge()}}catch(_){}
 }
 function novHtml(j){
   const n=J.nov[j.id];if(!n)return '';
-  const partes=[n.tareas?`${n.tareas} ${n.tareas===1?'tarea nueva':'tareas nuevas'}`:'',n.videos?`${n.videos} ${n.videos===1?'video nuevo':'videos nuevos'}`:''].filter(Boolean);
+  const partes=[n.tareas?`${n.tareas} ${n.tareas===1?'tarea nueva':'tareas nuevas'}`:'',n.videos?`${n.videos} ${n.videos===1?'video nuevo':'videos nuevos'}`:'',n.clases?`${n.clases} ${n.clases===1?'clase en video nueva':'clases en video nuevas'}`:''].filter(Boolean);
   let h='';
-  if(partes.length)h+=`<div class="nov">🔔 <b>${partes.join(' y ')}</b> de ${esc(j.es_titular?'tu profe':'su profe')}</div>`;
+  if(partes.length)h+=`<div class="nov">🔔 <b>${partes.join(', ').replace(/, ([^,]*)$/,' y $1')}</b> de ${esc(j.es_titular?'tu profe':'su profe')}</div>`;
   if(n.prox){const hoy=today(),man=A.addDays?A.addDays(hoy,1):'';
     if(n.prox.fecha===hoy||n.prox.fecha===man)h+=`<div class="nov cl">📅 ${n.prox.fecha===hoy?'Hoy':'Mañana'} a las ${esc(n.prox.hora||'')}${j.es_titular?' tienes':' tiene'} clase${n.prox.club?' en '+esc(n.prox.club):''}</div>`}
   return h;
@@ -262,6 +267,15 @@ async function verVideo(cid,vid){
   const m=await firmar([v.path]);const el=document.getElementById('mtv-v'),msg=document.getElementById('mtv-m');if(!el)return;
   if(m[v.path]){el.src=m[v.path];if(msg)msg.remove()}else if(msg)msg.textContent='No se pudo cargar el video. Revisa tu conexión.';
 }
+async function verClase(cid,kid){
+  const c=(J.mtData||[]).find(x=>x.id===cid);const v=c&&(c.clases||[]).find(x=>x.id===kid);if(!v)return;
+  sheet(`<div class="mtv"><h2>${esc(v.cat)} · ${esc(v.titulo)}</h2><video id="mtv-v" controls playsinline preload="metadata"></video>
+   <p class="muted" id="mtv-m" style="margin:6px 0 0;font-size:13px">Cargando video…</p>
+   ${v.nota?`<h4>Lo que explica ${esc(c.profe||'tu profe')}</h4><div style="white-space:pre-line">${esc(v.nota)}</div>`:''}
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button></div></div></div>`);
+  const m=await firmar([v.path]);const el=document.getElementById('mtv-v'),msg=document.getElementById('mtv-m');if(!el)return;
+  if(m[v.path]){el.src=m[v.path];if(msg)msg.remove()}else if(msg)msg.textContent='No se pudo cargar el video. Revisa tu conexión.';
+}
 const TPR={derecha:['Derecha','de 10'],reves:['Revés','de 10'],saque:['Saque','de 10'],volea:['Volea','de 10'],peloteo:['Peloteo','golpes seguidos'],pies:['Desplazamiento','segundos']};
 function fechaLarga(f,h){try{const d=parse(f);const t=d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});const hoy=today(),man=A.addDays?A.addDays(hoy,1):'';
   const pre=f===hoy?'Hoy':f===man?'Mañana':t.charAt(0).toUpperCase()+t.slice(1);return pre+(h?' · '+h:'')}catch(_){return f+(h?' '+h:'')}}
@@ -295,12 +309,19 @@ async function mostrarMiTenis(jid){
     if(TK.length){const hoy=today();
       h+=`<div class="card"><span class="jlbl">Tus tareas</span>${TK.map(t=>{const mias=PR.filter(x=>x.tarea===t.id),hecha=mias.some(x=>x.fecha===hoy);
         return `<div class="mtar"><b>${esc(t.titulo)}${VISTO.t.includes(t.id)?'':' <span class="nuevo">Nuevo</span>'}</b>${t.detalle?`<div class="det">${esc(t.detalle)}</div>`:''}
-         <div class="jfoot">${t.link?`<a class="btn" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
+         <div class="jfoot">${t.clase&&(c.clases||[]).some(k=>k.id===t.clase)?`<button class="btn" data-act="mt-clase" data-id="${esc(c.id)}" data-v="${esc(t.clase)}">🎬 Video de tu profe</button>`:''}${t.link?`<a class="btn" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
           <button class="btn ${hecha?'hecha':'primary'}" data-act="mt-prac" data-id="${esc(c.id)}" data-t="${esc(t.id)}" data-v="${hecha?'0':'1'}">${hecha?'✓ Practicado hoy':'Lo practiqué hoy'}</button></div>
          <span class="muted" style="font-size:12.5px">${mias.length?`Llevas ${mias.length} ${mias.length===1?'práctica':'prácticas'}`:'Aún no la practicas'}${hecha?' · toca de nuevo para deshacer':''}</span></div>`}).join('')}</div>`}
     // Videos
     const VS=Array.isArray(c.videos)?c.videos:[];
     if(VS.length)h+=`<div class="card"><span class="jlbl">Tus videos</span><div class="vgal">${VS.map(v=>`<button class="vit" data-act="mt-video" data-id="${esc(c.id)}" data-v="${esc(v.id)}"><div class="th">▶${v.thumb?`<img alt="" hidden data-mtthumb="${esc(v.path)}.jpg">`:''}${v.ia?'<span class="ia">IA</span>':''}</div><div class="in"><b>${esc(GOLPE[v.golpe]||'Video')}${VISTO.v.includes(v.id)?'':' <span class="nuevo">Nuevo</span>'}</b><span class="muted">${esc(fCorta(v.fecha))}${v.nota?' · 💬':''}</span></div></button>`).join('')}</div></div>`;
+    // Clases en video del profe, por golpe
+    const KL=(Array.isArray(c.clases)?c.clases:[]).filter(k=>k.lista);
+    if(KL.length){const cats=[...new Set(KL.map(k=>k.cat))];
+      h+=`<div class="card"><span class="jlbl">🎬 Clases de ${esc(c.profe||'tu profe')}</span>${cats.map((ct,i)=>{const xs=KL.filter(k=>k.cat===ct);const nuevos=xs.filter(k=>!(VISTO.k||[]).includes(k.id)).length;
+        return `<details class="kcat"${i===0?' open':''}><summary><b>${esc(ct)}</b> <span class="muted">${xs.length} ${xs.length===1?'video':'videos'}</span>${nuevos&&VISTO.k?` <span class="nuevo">${nuevos} nuevo${nuevos>1?'s':''}</span>`:''}</summary>
+          <div class="vgal">${xs.map(k=>`<button class="vit" data-act="mt-clase" data-id="${esc(c.id)}" data-v="${esc(k.id)}"><div class="th">▶${k.thumb?`<img alt="" hidden data-mtthumb="${esc(k.path)}.jpg">`:''}</div><div class="in"><b>${esc(k.titulo)}</b></div></button>`).join('')}</div></details>`}).join('')}</div>`;
+    }
     // Test Setly
     if(Array.isArray(d.tests)&&d.tests.length&&window.TAT){
       const al={tests:d.tests.map((t,i)=>({id:'t'+i,p:t.p,v:+t.v,fecha:t.fecha}))};
@@ -329,7 +350,7 @@ async function mostrarMiTenis(jid){
   }
   h+=`</div>`;
   cuerpo(h);cargarMiniaturas();
-  marcarVisto(jid,data);if(J.nov[jid]){J.nov[jid]={...J.nov[jid],tareas:0,videos:0};badge()}
+  marcarVisto(jid,data);if(J.nov[jid]){J.nov[jid]={...J.nov[jid],tareas:0,videos:0,clases:0};badge()}
 }
 function sheetJugador(j){
   const nuevo=!j,hayTitular=J.jugadores.some(x=>x.es_titular);
@@ -370,6 +391,7 @@ document.addEventListener('click',async e=>{
     case 'mt-ver':mostrarMiTenis(id);break;
     case 'mt-volver':J.mt=null;mostrarJugador();break;
     case 'mt-video':verVideo(id,b.dataset.v);break;
+    case 'mt-clase':verClase(id,b.dataset.v);break;
     case 'mt-torneo':if(window.TAR)window.TAR.sheetTorneo({modo:'jugador',jugadorId:id});break;
     case 'mt-prac':{if(b.disabled)break;b.disabled=true;
       const {error}=await sb().rpc('marcar_practica',{p_conexion:id,p_tarea:b.dataset.t,p_hecho:b.dataset.v==='1'});

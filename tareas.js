@@ -11,7 +11,7 @@ const T={prac:{},t:0,cargando:false,sinScript:false,verCerradas:{}};
 const st=document.createElement('style');st.textContent=`
 .tar{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;background:var(--surface);display:flex;flex-direction:column;gap:6px}
 .tar b{font-size:15px}
-.tar .det{font-size:13.5px;white-space:pre-line}
+.tar .det{font-size:13.5px;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .tar .meta{font-size:12.5px;color:var(--muted)}
 .tar .meta.ok{color:var(--ok);font-weight:600}
 .tar .acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
@@ -48,7 +48,7 @@ function tarjeta(a,t){
   const prac=p?`<span class="meta ok">Practicó ${p.veces} ${p.veces===1?'vez':'veces'} · última ${esc(fmtF(p.ultima))}</span>`:`<span class="meta">Aún no marca práctica</span>`;
   return `<div class="tar${t.estado==='cerrada'?' cerrada':''}"><b>${esc(t.titulo)}</b>${t.detalle?`<div class="det">${esc(t.detalle)}</div>`:''}
    <span class="meta">Asignada ${esc(fmtF(t.creada))}${t.estado==='cerrada'?' · terminada':''}</span>${t.estado==='cerrada'?'':prac}
-   <div class="acc">${t.link?`<a class="btn small" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
+   <div class="acc">${t.clase&&window.TAV&&window.TAV.nombre(t.clase)?`<button class="btn small" data-vact="ver" data-id="${esc(t.clase)}">🎬 Tu video</button>`:''}${t.link?`<a class="btn small" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
     ${t.estado==='cerrada'?`<button class="btn small ghost" data-kact="reabrir" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Reactivar</button>`
       :`${wa(a.telefono,'x')?`<a class="btn small wa" href="${esc(wa(a.telefono,msgTarea(a,t)))}" target="_blank" rel="noopener">📲 Avisar</a>`:''}<button class="btn small ghost" data-kact="editar" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Editar</button><button class="btn small ghost" data-kact="cerrar" data-id="${esc(a.id)}" data-t="${esc(t.id)}">Terminar</button>`}</div></div>`;
 }
@@ -81,16 +81,22 @@ function sheetTarea(id,tid){
   A.sheet(`<h2>${nueva?'Asignar tarea':'Editar tarea'}</h2><p class="muted" style="margin:0">${esc(limpio(a.nombre))}</p>
   <form id="f-tarea" data-id="${esc(id)}" data-t="${esc(tid||'')}"><div style="display:flex;flex-direction:column;gap:14px">
   ${nueva&&pl.length?`<div class="field"><label for="tk-pl">Usar una tarea anterior</label><select id="tk-pl"><option value="">— Nueva —</option>${pl.map((p,i)=>`<option value="${i}">${esc(p.titulo)}</option>`).join('')}</select></div>`:''}
+  ${window.TAE?`<div class="field"><label for="tk-ej">📚 Biblioteca de ejercicios para la casa</label><select id="tk-ej"><option value="">— Elegir un ejercicio ya redactado —</option>${window.TAE.CATS.map(c=>`<optgroup label="${esc(c)}">${window.TAE.LISTA.map((x,i)=>x.cat===c?`<option value="${i}">${esc(x.titulo)}</option>`:'').join('')}</optgroup>`).join('')}</select>
+   <div class="muted" style="font-size:12px">Se completa la tarea con la explicación lista. Puedes editarla antes de asignar.</div></div>`:''}
   <div class="field"><label for="tk-tit">Tarea</label><input id="tk-tit" required maxlength="80" value="${esc(t?t.titulo:'')}" placeholder="Ej: Swing de derecha"></div>
-  <div class="field"><label for="tk-det">Cómo hacerla</label><textarea id="tk-det" rows="3" maxlength="600" placeholder="Ej: 3 series de 20 sombras frente al espejo. Fíjate en terminar el golpe sobre el hombro.">${esc(t?t.detalle||'':'')}</textarea></div>
-  <div class="field"><label for="tk-link">Video de apoyo (opcional)</label><input id="tk-link" type="text" inputmode="url" autocapitalize="off" autocorrect="off" maxlength="500" value="${esc(t?t.link||'':'')}" placeholder="Link de YouTube, Instagram o Drive">
+  <div class="field"><label for="tk-det">Cómo hacerla</label><textarea id="tk-det" rows="6" maxlength="1500" placeholder="Ej: 3 series de 20 sombras frente al espejo. Fíjate en terminar el golpe sobre el hombro.">${esc(t?t.detalle||'':'')}</textarea></div>
+  ${window.TAV&&window.TAV.opciones().length?`<div class="field"><label for="tk-clase">🎬 Uno de tus videos (opcional)</label><select id="tk-clase"><option value="">— Ninguno —</option>${window.TAV.opciones().map(v=>`<option value="${esc(v.id)}" ${t&&t.clase===v.id?'selected':''}>${esc(v.cat)}: ${esc(v.titulo)}</option>`).join('')}</select></div>`:''}
+  <div class="field"><label for="tk-link">Video de YouTube u otro link (opcional)</label><input id="tk-link" type="text" inputmode="url" autocapitalize="off" autocorrect="off" maxlength="500" value="${esc(t?t.link||'':'')}" placeholder="Link de YouTube, Instagram o Drive">
    <div class="muted" style="font-size:12px">Tip: sube tus videos a YouTube como "No listado"; solo los ve quien tiene el link.</div></div>
   ${nueva&&otros.length?`<div class="field"><span>Asignar también a</span><div class="tasig">${otros.map(x=>`<label><input type="checkbox" name="tk-al" value="${esc(x.id)}">${esc(limpio(x.nombre))}</label>`).join('')}</div></div>`:''}
   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">${nueva?'Asignar':'Guardar'}</button></div></div>
   </div></form>`);
+  const ej=document.getElementById('tk-ej');
+  if(ej)ej.addEventListener('change',()=>{const x=window.TAE.LISTA[+ej.value];if(!x||ej.value==='')return;
+    document.getElementById('tk-tit').value=x.titulo.slice(0,80);document.getElementById('tk-det').value=x.texto});
   const sel=document.getElementById('tk-pl');
   if(sel)sel.addEventListener('change',()=>{const p=pl[+sel.value];if(!p)return;
-    document.getElementById('tk-tit').value=p.titulo;document.getElementById('tk-det').value=p.detalle||'';document.getElementById('tk-link').value=p.link||''});
+    document.getElementById('tk-tit').value=p.titulo;document.getElementById('tk-det').value=p.detalle||'';document.getElementById('tk-link').value=p.link||'';const sc=document.getElementById('tk-clase');if(sc)sc.value=p.clase||''});
 }
 async function cambiar(id,tid,cambio){
   const a=A.alumno(id);if(!a)return;
@@ -121,17 +127,18 @@ document.addEventListener('submit',async e=>{
   e.preventDefault();
   const titulo=document.getElementById('tk-tit').value.trim(),detalle=document.getElementById('tk-det').value.trim();
   let link=document.getElementById('tk-link').value.trim();
+  const clase=(document.getElementById('tk-clase')||{}).value||'';
   if(titulo.length<2){toast('Escribe la tarea');return}
   if(link&&!/^https?:\/\//i.test(link))link='https://'+link;
   if(link&&!linkOk(link)){toast('Revisa el link del video');return}
   const id=f.dataset.id,tid=f.dataset.t;
   A.closeSheet();
   try{
-    if(tid){await cambiar(id,tid,{titulo,detalle,link});toast('Tarea guardada');return}
+    if(tid){await cambiar(id,tid,{titulo,detalle,link,clase});toast('Tarea guardada');return}
     const ids=[id,...[...f.querySelectorAll('input[name=tk-al]:checked')].map(x=>x.value)];
     const hechos=[];
     for(const aid of ids){const a=A.alumno(aid);if(!a)continue;
-      const t={id:uid(),titulo,detalle,link,creada:A.today(),estado:'activa'};
+      const t={id:uid(),titulo,detalle,link,clase,creada:A.today(),estado:'activa'};
       await A.save('alumnos',{...a,tareas:[...lista(a),t]});hechos.push([A.alumno(aid)||a,t])}
     avisar(hechos);
   }catch(_){}

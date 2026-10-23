@@ -280,7 +280,7 @@ table.hist .neg{color:var(--bad)}
 
 <script>
 (function(){
-const S={alumnos:[],clases:[],pagos:[],config:[],clubes:[],gastos:[],transferencias:[],evals:[],videos:[]};
+const S={alumnos:[],clases:[],pagos:[],config:[],clubes:[],gastos:[],transferencias:[],evals:[],videos:[],biblio:[]};
 const loaded={alumnos:false,clases:false,pagos:false,config:false,clubes:false,gastos:false,transferencias:false,evals:true,videos:true};
 let db=null, mode='loading';
 const ui={tab:'agenda',week:mondayOf(today()),month:today().slice(0,7),open:null,armed:null,agView:'lista',calMonth:today().slice(0,7),selDay:today()};
@@ -797,7 +797,7 @@ function vAlumnos(){
   if(!S.alumnos.length)return `<div class="empty"><strong>Aún no hay alumnos</strong>Agrega el nombre, el valor por clase y si paga a fin de mes o por adelantado.<button class="btn primary" data-act="new-alumno">+ Agregar alumno</button></div>`;
   const m=today().slice(0,7);const rs=Object.fromEntries(resumenMes(m).map(r=>[r.a.id,r]));
   const arch=S.alumnos.filter(a=>a.archivado);
-  let h=(window.TAP?window.TAP.usoHtml():'')+`<input id="al-q" class="search" type="search" placeholder="Buscar alumno…" autocomplete="off" value="${esc(ui.alQ||'')}" aria-label="Buscar alumno"><div class="list">`;
+  let h=(window.TAP?window.TAP.usoHtml():'')+(window.TAV?window.TAV.botonHtml():'')+`<input id="al-q" class="search" type="search" placeholder="Buscar alumno…" autocomplete="off" value="${esc(ui.alQ||'')}" aria-label="Buscar alumno"><div class="list">`;
   for(const a of [...S.alumnos].filter(a=>!a.archivado||ui.verArch).sort((x,y)=>(!!x.archivado-!!y.archivado)||x.nombre.localeCompare(y.nombre))){
     const r=rs[a.id];const ini=a.nombre.replace(/^Ejemplo:\s*/,'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const dn=norm(a.nombre+' '+(a.titular||''));
@@ -1241,6 +1241,8 @@ init();
 <script src="perfil.js"></script>
 <script src="ficha.js"></script>
 <script src="test.js"></script>
+<script src="ejercicios.js"></script>
+<script src="videoteca.js"></script>
 <script src="tareas.js"></script>
 <script src="torneos.js"></script>
 <script src="jugador.js"></script>
