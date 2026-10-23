@@ -194,7 +194,7 @@ function vPerfil(id){
   h+=`<section class="xp"><div class="sec-h"><h3>Videos</h3><div class="row2"><button class="btn small primary" data-xact="rec" data-id="${esc(id)}">● Grabar</button><button class="btn small" data-xact="upl" data-id="${esc(id)}">Subir</button></div></div>`;
   if(!V.length)h+=`<div class="note">Guarda videos de sus golpes para ver cómo mejora. Antes de grabar, la app te muestra consejos para que todos los videos queden parecidos y se puedan comparar.</div>`;
   else{
-    h+=`<div class="vgrid">${V.map(v=>`<button class="vcard" data-xact="vid" data-id="${esc(v.id)}"><div class="th">${v.thumb?`<img alt="" data-thumb="${esc(v.path)}.jpg" hidden>`:''}<span data-ph>▶</span>${v.ia?'<span class="ia">IA</span>':''}</div><div class="in"><b>${esc(GOLPES[v.golpe]||'Golpe')}</b><span>${esc(fmtF(v.fecha))}${v.angulo&&ANGULOS[v.angulo]?' · '+esc(ANGULOS[v.angulo]):''}</span>${v.nota?`<span>${esc(v.nota.slice(0,48))}${v.nota.length>48?'…':''}</span>`:''}</div></button>`).join('')}</div>
+    h+=`<div class="vgrid">${V.map(v=>`<button class="vcard" data-xact="vid" data-id="${esc(v.id)}"><div class="th">${v.thumb?`<img alt="" data-thumb="${esc(v.path)}.jpg" hidden>`:''}<span data-ph>▶</span>${v.ia?'<span class="ia">IA</span>':''}${v.compartido?'<span class="ia" style="left:6px;right:auto" title="Compartido con el alumno">👁</span>':''}</div><div class="in"><b>${esc(GOLPES[v.golpe]||'Golpe')}</b><span>${esc(fmtF(v.fecha))}${v.angulo&&ANGULOS[v.angulo]?' · '+esc(ANGULOS[v.angulo]):''}</span>${v.nota?`<span>${esc(v.nota.slice(0,48))}${v.nota.length>48?'…':''}</span>`:''}</div></button>`).join('')}</div>
     <div class="row2"><button class="btn small" data-xact="cmp-pick" data-id="${esc(id)}"${V.length<2?' disabled':''}>Comparar dos videos</button><button class="btn small ghost" data-xact="cam-nota" data-id="${esc(id)}">Cómo lo grabo</button></div>
     <span class="muted" style="font-size:12px">${V.length} video${V.length===1?'':'s'} · ${mb(usados)}</span>`;
   }
@@ -782,6 +782,8 @@ async function openViewer(arg){
     if(N>1){info.innerHTML=`<button class="xb pri" data-v="ia">Analizar la comparación con IA</button>${r.ia&&r.ia.vs?'<button class="xb" data-v="ia-ver">Ver análisis guardado</button>':''}<span style="font-size:12px;color:#9fb0bf">Marca el impacto en los dos videos para que la IA mire el momento justo.</span>`;return}
     info.innerHTML=`<div style="font-size:12.5px;color:#9fb0bf">${esc(GOLPES[r.golpe]||'')} · ${esc(fmtF(r.fecha))}${r.angulo&&ANGULOS[r.angulo]?' · '+esc(ANGULOS[r.angulo]):''}${r.size?' · '+mb(r.size):''}</div>
     <textarea id="xv-nota" rows="2" placeholder="Nota sobre este video">${esc(r.nota||'')}</textarea>
+    <button class="xb${r.compartido?' on':''}" data-v="share" style="align-self:flex-start">${r.compartido?'✓ Compartido con el alumno · dejar de compartir':'Compartir con el alumno'}</button>
+    ${r.compartido?`<span style="font-size:12px;color:#9fb0bf">Lo ve en su app junto a tu nota${r.ia?' y el análisis IA':''}.</span>`:''}
     <div class="r" style="display:flex;gap:6px;flex-wrap:wrap"><button class="xb pri" data-v="ia">Analizar con IA</button>${r.ia?'<button class="xb" data-v="ia-ver">Ver análisis guardado</button>':''}<button class="xb" data-v="cmp">Comparar con otro</button><button class="xb bad" data-v="del">Borrar</button></div>
     <span style="font-size:12px;color:#9fb0bf">Tip: pausa en el instante del impacto y toca “Marcar impacto”. Mejora la IA y alinea la comparación.</span>`;
   }
@@ -804,6 +806,7 @@ async function openViewer(arg){
       case 'mark':{pause();const i=+b.dataset.i;imp[i]=Vs[i].currentTime;await patch(i,{impacto:Math.round(imp[i]*100)/100});t=Vs[0].currentTime-imp[0];setT(t);break}
       case 'ia':analizar(recs,ia=>{recs[recs.length-1]={...recs[recs.length-1],ia};drawInfo()});break;
       case 'ia-ver':{const r=recs[recs.length-1];if(r.ia){const al=A.alumno&&A.alumno(r.alumnoId);iaTit='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' · '+al.nombre:'')+' · '+(r.ia.fecha||A.today());iaHab='Análisis de '+(GOLPES[r.golpe]||'golpe').toLowerCase()+(al?' de '+String(al.nombre).split(' ')[0]:'');iaCtx={ia:r.ia,rec:r,fotos:null,ts:r.ia.momentos&&r.ia.momentos.length?r.ia.momentos:null}}if(r.ia)dialogIA(iaHtml(r.ia)+(r.ia.notaProfe?`<div class="note"><b>Mis comentarios:</b> ${esc(r.ia.notaProfe)}</div>`:''));break}
+      case 'share':{const on=!recs[0].compartido;await patch(0,{compartido:on});drawInfo();toast(on?'Video compartido: el alumno lo verá en su app':'El alumno ya no verá este video');break}
       case 'cmp':{const al=recs[0].alumnoId,id=recs[0].id;dispose();sheetComparar(al,id);break}
       case 'del':{
         if(ui.armed!=='vdel'){ui.armed='vdel';b.textContent='Toca otra vez para borrar';return}

@@ -66,6 +66,16 @@ const st=document.createElement('style');st.id='jstyle';st.textContent=`
 .mt .mtar:first-of-type{border-top:0;padding-top:2px}
 .mt .mtar b{font-size:15px}.mt .mtar .det{font-size:13.5px;white-space:pre-line}
 .auth .mt .btn.hecha{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.mt .vgal{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mt .vit{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);text-align:left;padding:0;font:inherit;color:inherit;cursor:pointer}
+.mt .vit .th{aspect-ratio:16/10;background:#0e2d4a;display:grid;place-items:center;color:#fff;font-size:22px;position:relative}
+.mt .vit .th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mt .vit .in{padding:6px 8px;font-size:12.5px;display:flex;flex-direction:column}
+.mt .vit .ia{position:absolute;top:6px;right:6px;background:var(--ball);color:var(--ball-ink);font-size:11px;font-weight:700;border-radius:99px;padding:1px 7px}
+.mtv video{width:100%;border-radius:10px;background:#000;max-height:60vh}
+.mtv h4{margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mtv ul{margin:0;padding-left:20px}
+.mtv .aviso{font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px}
 .auth .jcard .btn.mtbtn{width:100%;padding:10px 12px;font-size:15px}
 `;document.head.appendChild(st);
 
@@ -185,10 +195,31 @@ function mostrarJugador(aviso){
     </article>`;
   }
   h+=`<div class="jfoot">${J.jugadores.length?`<button class="btn" data-act="jug-add">+ Agregar otro jugador</button>`:''}<button class="btn" data-act="jug-cuenta">Mi cuenta</button></div>
-   <section class="pronto"><span class="jlbl">Próximamente en tu app</span><div class="chips"><span>Videos y comentarios del profe</span><span>Análisis con IA</span><span>Torneos y logros</span></div></section></div>`;
+   <section class="pronto"><span class="jlbl">Próximamente en tu app</span><div class="chips"><span>Torneos y logros</span></div></section></div>`;
   cuerpo(h);
 }
 /* ---------- Mi tenis (etapa 2, parte 3) ---------- */
+const GOLPE={derecha:'Derecha',reves:'Revés',saque:'Saque',volea:'Volea',remate:'Remate',otro:'Golpe'};
+async function firmar(paths){try{const {data,error}=await sb().storage.from('videos').createSignedUrls(paths,3600);if(error||!data)return {};return Object.fromEntries(data.filter(d=>d&&d.signedUrl).map(d=>[d.path,d.signedUrl]))}catch(_){return {}}}
+async function cargarMiniaturas(){
+  const imgs=[...document.querySelectorAll('img[data-mtthumb]')];if(!imgs.length)return;
+  const m=await firmar(imgs.map(i=>i.dataset.mtthumb));
+  for(const i of imgs){const u=m[i.dataset.mtthumb];if(u){i.onload=()=>{i.hidden=false};i.src=u}}
+}
+async function verVideo(cid,vid){
+  const c=(J.mtData||[]).find(x=>x.id===cid);const v=c&&(c.videos||[]).find(x=>x.id===vid);if(!v)return;
+  const L=(t,arr)=>Array.isArray(arr)&&arr.length?`<h4>${t}</h4><ul>${arr.map(x=>`<li>${esc(typeof x==='string'?x:(x&&x.nombre?x.nombre+': ':'')+((x&&x.observacion)||''))}</li>`).join('')}</ul>`:'';
+  const ia=v.ia;
+  sheet(`<div class="mtv"><h2>${esc(GOLPE[v.golpe]||'Video')} · ${esc(fCorta(v.fecha))}</h2>
+   <video id="mtv-v" controls playsinline preload="metadata"></video><p class="muted" id="mtv-m" style="margin:6px 0 0;font-size:13px">Cargando video…</p>
+   ${v.nota?`<h4>Comentario de ${esc(c.profe||'tu profe')}</h4><div>${esc(v.nota)}</div>`:''}
+   ${ia?`${ia.notaProfe?`<h4>Lo que dice ${esc(c.profe||'tu profe')}</h4><div>${esc(ia.notaProfe)}</div>`:''}
+     ${ia.resumen?`<h4>Análisis IA · resumen</h4><div>${esc(ia.resumen)}</div>`:''}${L('Lo que está bien',ia.fortalezas)}${L('Para mejorar',ia.mejoras)}${L('Por fases del golpe',ia.fases)}${L('Para la próxima grabación',ia.puntos_a_revisar)}
+     <div class="aviso">El análisis IA es orientativo y puede equivocarse. Lo que manda es lo que te dice tu profe en la cancha.</div>`:''}
+   <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button></div></div></div>`);
+  const m=await firmar([v.path]);const el=document.getElementById('mtv-v'),msg=document.getElementById('mtv-m');if(!el)return;
+  if(m[v.path]){el.src=m[v.path];if(msg)msg.remove()}else if(msg)msg.textContent='No se pudo cargar el video. Revisa tu conexión.';
+}
 const TPR={derecha:['Derecha','de 10'],reves:['Revés','de 10'],saque:['Saque','de 10'],volea:['Volea','de 10'],peloteo:['Peloteo','golpes seguidos'],pies:['Desplazamiento','segundos']};
 function fechaLarga(f,h){try{const d=parse(f);const t=d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});const hoy=today(),man=A.addDays?A.addDays(hoy,1):'';
   const pre=f===hoy?'Hoy':f===man?'Mañana':t.charAt(0).toUpperCase()+t.slice(1);return pre+(h?' · '+h:'')}catch(_){return f+(h?' '+h:'')}}
@@ -200,6 +231,7 @@ async function mostrarMiTenis(jid){
   try{const r=await sb().rpc('mi_tenis',{p_jugador:jid});if(r.error)throw r.error;data=Array.isArray(r.data)?r.data:[]}
   catch(_){cuerpo(`<div class="mt"><button class="btn ghost" data-act="mt-volver" style="align-self:flex-start">‹ Volver</button><div class="msg bad">No pudimos cargar la información. Revisa tu conexión e intenta de nuevo.</div><button class="btn" data-act="mt-ver" data-id="${esc(jid)}">Reintentar</button></div>`);return}
   if(J.mt!==jid)return;
+  J.mtData=data;
   const nom=String(j.nombre).split(' ')[0];
   let h=`<div class="mt"><button class="btn ghost" data-act="mt-volver" style="align-self:flex-start">‹ Volver</button>
    <div class="jug-head"><h2>${j.es_titular?'Mi tenis':'El tenis de '+esc(nom)}</h2></div>`;
@@ -222,6 +254,9 @@ async function mostrarMiTenis(jid){
          <div class="jfoot">${t.link?`<a class="btn" href="${esc(t.link)}" target="_blank" rel="noopener">▶ Ver video</a>`:''}
           <button class="btn ${hecha?'hecha':'primary'}" data-act="mt-prac" data-id="${esc(c.id)}" data-t="${esc(t.id)}" data-v="${hecha?'0':'1'}">${hecha?'✓ Practicado hoy':'Lo practiqué hoy'}</button></div>
          <span class="muted" style="font-size:12.5px">${mias.length?`Llevas ${mias.length} ${mias.length===1?'práctica':'prácticas'}`:'Aún no la practicas'}${hecha?' · toca de nuevo para deshacer':''}</span></div>`}).join('')}</div>`}
+    // Videos
+    const VS=Array.isArray(c.videos)?c.videos:[];
+    if(VS.length)h+=`<div class="card"><span class="jlbl">Tus videos</span><div class="vgal">${VS.map(v=>`<button class="vit" data-act="mt-video" data-id="${esc(c.id)}" data-v="${esc(v.id)}"><div class="th">▶${v.thumb?`<img alt="" hidden data-mtthumb="${esc(v.path)}.jpg">`:''}${v.ia?'<span class="ia">IA</span>':''}</div><div class="in"><b>${esc(GOLPE[v.golpe]||'Video')}</b><span class="muted">${esc(fCorta(v.fecha))}${v.nota?' · 💬':''}</span></div></button>`).join('')}</div></div>`;
     // Test Setly
     if(Array.isArray(d.tests)&&d.tests.length&&window.TAT){
       const al={tests:d.tests.map((t,i)=>({id:'t'+i,p:t.p,v:+t.v,fecha:t.fecha}))};
@@ -237,8 +272,8 @@ async function mostrarMiTenis(jid){
     if(f.mental)h+=`<div class="card"><span class="jlbl">Cabeza</span><div>${esc(f.mental)}</div></div>`;
     h+=`<div class="card"><span class="jlbl">Clases</span><div><b>${d.realizadas||0}</b> clases realizadas${d.ultimas&&d.ultimas.length?` · última el ${esc(fCorta(d.ultimas[0]))}`:''}</div></div>`;
   }
-  h+=`<section class="pronto"><span class="jlbl">Próximamente</span><div class="chips"><span>Videos y comentarios del profe</span><span>Torneos y logros</span></div></section></div>`;
-  cuerpo(h);
+  h+=`<section class="pronto"><span class="jlbl">Próximamente</span><div class="chips"><span>Torneos y logros</span></div></section></div>`;
+  cuerpo(h);cargarMiniaturas();
 }
 function sheetJugador(j){
   const nuevo=!j,hayTitular=J.jugadores.some(x=>x.es_titular);
@@ -278,6 +313,7 @@ document.addEventListener('click',async e=>{
     case 'jug-add':sheetJugador();break;
     case 'mt-ver':mostrarMiTenis(id);break;
     case 'mt-volver':J.mt=null;mostrarJugador();break;
+    case 'mt-video':verVideo(id,b.dataset.v);break;
     case 'mt-prac':{if(b.disabled)break;b.disabled=true;
       const {error}=await sb().rpc('marcar_practica',{p_conexion:id,p_tarea:b.dataset.t,p_hecho:b.dataset.v==='1'});
       if(error){b.disabled=false;toast('No se pudo guardar. Revisa tu conexión.');break}
