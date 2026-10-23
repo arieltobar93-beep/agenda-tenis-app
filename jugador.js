@@ -8,7 +8,7 @@ const A=window.TA;if(!A)return;
 const {esc,toast,sheet,closeSheet,today,parse}=A;
 const sb=()=>A.sb();
 const NIVELES=['Iniciación','Intermedio','Avanzado','Competencia'];
-const J={u:null,perfil:null,jugadores:[],armed:null,nHijos:0};
+const J={u:null,perfil:null,jugadores:[],conex:[],armed:null,nHijos:0,visible:false};
 const kRol=id=>'tenis-rol-'+id, kJug=id=>'tenis-jug-'+id;
 const store={get(k){try{return localStorage.getItem(k)}catch(_){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(_){}}};
 
@@ -39,6 +39,13 @@ const st=document.createElement('style');st.id='jstyle';st.textContent=`
 .pronto .chips{display:flex;flex-wrap:wrap;gap:6px}
 .pronto .chips span{border:1px dashed var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px;color:var(--muted)}
 .jfoot{display:flex;gap:8px;flex-wrap:wrap}
+.solic{border:1px solid var(--ball);background:var(--surface);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.solic b{font-size:15px}
+.auth .solic .btn,.auth .jprof .btn{width:auto;padding:6px 12px;font-size:13px}
+.jprof{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px dashed var(--line)}
+.jprof:first-of-type{border-top:0}
+.vbadge{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--ok-bg);color:var(--ok)}
+.nobadge{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;background:var(--warn-bg);color:var(--warn)}
 `;document.head.appendChild(st);
 
 /* ---------- datos ---------- */
@@ -48,6 +55,9 @@ async function cargarJugadores(){
   const {data,error}=await sb().from('jugadores').select('*').eq('cuenta_id',J.u.id).order('creado',{ascending:true});
   if(error)throw error;
   J.jugadores=data||[];store.set(kJug(J.u.id),JSON.stringify({perfil:J.perfil,jugadores:J.jugadores}));
+}
+async function cargarConexiones(){
+  try{const {data,error}=await sb().rpc('mis_conexiones_jugador');J.conex=error||!Array.isArray(data)?[]:data}catch(_){J.conex=[]}
 }
 async function crearPerfil(rol,nombre,telefono){
   const {data,error}=await sb().from('perfiles').insert({rol,nombre,telefono:telefono||null}).select().single();
@@ -76,6 +86,7 @@ async function antesDeCargar(u){
     J.perfil=r.data;store.set(kRol(u.id),r.data.rol);
     if(r.data.rol==='profe')return true;
     try{await cargarJugadores()}catch(_){}
+    await cargarConexiones();
     mostrarJugador();return false;
   }
   // Cuenta sin perfil: si ya tiene agenda es un profe de antes y sigue directo.
@@ -88,6 +99,7 @@ async function antesDeCargar(u){
 /* ---------- pantallas de entrada ---------- */
 function cuerpo(html){A.showAuth('loading');document.getElementById('auth').classList.remove('splash');document.getElementById('auth-body').innerHTML=html}
 function mostrarRol(){
+  J.visible=false;
   cuerpo(`<div class="auth-card"><h2>¡Bienvenido!</h2>
    <p class="muted" style="margin:0">Cuéntanos cómo vas a usar la app. Esta elección no se puede cambiar después.</p>
    <div class="rol-cards">
@@ -122,9 +134,18 @@ function edad(f){if(!f)return null;const n=parse(f),h=parse(today());let e=h.get
 const iniciales=n=>String(n||'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
 const codigoTxt=j=>`Hola profe! Mi código de jugador en Setly es ${j.codigo}${j.es_titular?'':' ('+j.nombre+')'}. Conéctame desde mi ficha de alumno.`;
 function mostrarJugador(aviso){
+  J.visible=true;
   const nom=String((J.perfil&&J.perfil.nombre)||'').split(' ')[0];
   let h=`<div class="jug"><div class="jug-head"><h2>Hola${nom?', '+esc(nom):''}</h2><p class="muted">Este es tu espacio de jugador. Comparte el código de cada jugador con su profe para conectarse.</p></div>`;
   if(aviso)h+=`<div class="msg bad">${esc(aviso)}</div>`;
+  const nomJug=id=>(J.jugadores.find(x=>x.id===id)||{}).nombre||'';
+  const badge=c=>c.verificado?'<span class="vbadge">✓ Profe verificado</span>':'<span class="nobadge">Sin verificar</span>';
+  for(const c of J.conex.filter(x=>x.estado==='pendiente')){
+    h+=`<div class="solic"><span class="jlbl">Solicitud de conexión</span><b>${esc(c.profe||'Un profe')} quiere conectarse con ${esc(nomJug(c.jugador_id))}</b>
+     <div>${badge(c)}${c.club?` <span class="muted" style="font-size:12.5px">· ${esc(c.club)}</span>`:''}</div>
+     <span class="muted" style="font-size:12.5px">Si aceptas, podrá ver el perfil deportivo de ${esc(nomJug(c.jugador_id))} y dejarle planes, ejercicios y evaluaciones. Puedes desconectarlo cuando quieras.</span>
+     <div class="jfoot"><button class="btn primary" data-act="con-aceptar" data-id="${esc(c.id)}">Aceptar</button><button class="btn" data-act="con-rechazar" data-id="${esc(c.id)}">Rechazar</button></div></div>`;
+  }
   if(!J.jugadores.length)h+=`<div class="auth-card"><h2>Agrega quién juega</h2><p class="muted" style="margin:0">Crea tu perfil de jugador o el de tus hijos para recibir su código.</p><button class="btn primary" data-act="jug-add">+ Agregar jugador</button></div>`;
   for(const j of J.jugadores){
     const e=edad(j.fecha_nacimiento);
@@ -134,7 +155,10 @@ function mostrarJugador(aviso){
      ${e!=null&&e<18?`<span class="muted" style="font-size:12.5px">Menor de edad: solo tú, como apoderado, puedes aceptar conexiones con profes.</span>`:''}
      <div class="codigo"><span>Código para el profe</span><strong>${esc(j.codigo)}</strong>
       <div class="acts"><button class="btn" data-act="jug-copy" data-id="${esc(j.id)}">Copiar</button><a class="btn wa" href="https://wa.me/?text=${encodeURIComponent(codigoTxt(j))}" target="_blank" rel="noopener">Enviar por WhatsApp</a></div></div>
-     <div class="jprofes"><span class="jlbl">Profes conectados</span><p class="muted">Aún no hay profes conectados. Muy pronto tu profe podrá conectarse usando este código.</p></div>
+     <div class="jprofes"><span class="jlbl">Profes conectados</span>${(()=>{const cs=J.conex.filter(x=>x.jugador_id===j.id&&x.estado==='aceptada');
+       return cs.length?cs.map(c=>`<div class="jprof"><div><b>${esc(c.profe||'Profe')}</b> ${c.verificado?'<span class="vbadge">✓</span>':''}${c.club?`<div class="muted" style="font-size:12.5px">${esc(c.club)}</div>`:''}</div>
+         <div class="jfoot"><button class="btn" data-act="con-reportar" data-id="${esc(c.profe_id)}">Reportar</button><button class="btn danger" data-act="con-terminar" data-id="${esc(c.id)}">Desconectar</button></div></div>`).join('')
+       :`<p class="muted">Aún no hay profes conectados. Dale este código a tu profe: él lo ingresa en tu ficha y tú aceptas la solicitud aquí.</p>`})()}</div>
     </article>`;
   }
   h+=`<div class="jfoot">${J.jugadores.length?`<button class="btn" data-act="jug-add">+ Agregar otro jugador</button>`:''}<button class="btn" data-act="jug-cuenta">Mi cuenta</button></div>
@@ -170,7 +194,8 @@ function sheetCuenta(){
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]');if(!b||!J.u)return;
   const act=b.dataset.act,id=b.dataset.id;
-  if(act!=='jug-borrar')J.armed=null;
+  if(act!=='jug-borrar'&&act!=='con-terminar')J.armed=null;
+  if(act==='del-logout')J.visible=false;
   switch(act){
     case 'rol-elegir':b.dataset.v==='profe'?formProfe():formJugador();break;
     case 'rol-volver':mostrarRol();break;
@@ -178,6 +203,18 @@ document.addEventListener('click',async e=>{
     case 'jug-add':sheetJugador();break;
     case 'jug-edit':sheetJugador(J.jugadores.find(x=>x.id===id));break;
     case 'jug-cuenta':sheetCuenta();break;
+    case 'con-aceptar':case 'con-rechazar':{
+      const {error}=await sb().rpc('responder_conexion',{p_id:id,p_acepta:act==='con-aceptar'});
+      if(error){toast('No se pudo responder. Revisa tu conexión.');break}
+      await cargarConexiones();mostrarJugador();toast(act==='con-aceptar'?'Conexión aceptada':'Solicitud rechazada');break}
+    case 'con-terminar':{
+      if(J.armed!=='c-'+id){J.armed='c-'+id;b.textContent='Toca otra vez para desconectar';b.classList.add('armed');break}
+      J.armed=null;const {error}=await sb().rpc('terminar_conexion',{p_id:id});
+      if(error){toast('No se pudo desconectar');break}
+      await cargarConexiones();mostrarJugador();toast('Profe desconectado');break}
+    case 'con-reportar':sheet(`<h2>Reportar profe</h2><form id="f-reporte" data-id="${esc(id)}"><div style="display:flex;flex-direction:column;gap:14px">
+       <div class="field"><label for="rp-motivo">¿Qué pasó?</label><textarea id="rp-motivo" rows="4" required minlength="3" maxlength="500" placeholder="Cuéntanos qué pasó. Lo revisamos y podemos quitarle la verificación."></textarea></div>
+       <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Enviar reporte</button></div></div></div></form>`);break;
     case 'jug-copy':{const j=J.jugadores.find(x=>x.id===id);if(!j)break;try{await navigator.clipboard.writeText(j.codigo);toast('Código copiado: '+j.codigo)}catch(_){toast('Tu código es '+j.codigo)}break}
     case 'jug-borrar':{
       if(J.armed!==id){J.armed=id;b.textContent='Toca otra vez para eliminar';b.classList.add('armed');break}
@@ -187,7 +224,7 @@ document.addEventListener('click',async e=>{
   }
 });
 document.addEventListener('submit',async e=>{
-  const f=e.target;if(!['f-rol-profe','f-rol-jug','f-jug','f-cuenta'].includes(f.id))return;
+  const f=e.target;if(!['f-rol-profe','f-rol-jug','f-jug','f-cuenta','f-reporte'].includes(f.id))return;
   e.preventDefault();e.stopImmediatePropagation();
   const v=id=>((document.getElementById(id)||{}).value||'').trim();
   const btn=f.querySelector('button[type=submit]');if(btn.disabled)return;btn.disabled=true;
@@ -214,6 +251,12 @@ document.addEventListener('submit',async e=>{
       const {error}=await q;if(error){toast(errJug(error));return}
       closeSheet();await cargarJugadores();mostrarJugador();toast('Jugador guardado');
     }
+    if(f.id==='f-reporte'){
+      const motivo=v('rp-motivo');if(motivo.length<3){toast('Cuéntanos qué pasó');return}
+      const {error}=await sb().from('reportes').insert({profe_id:f.dataset.id,motivo});
+      if(error){toast('No se pudo enviar el reporte');return}
+      closeSheet();toast('Reporte enviado. Gracias por avisar.');
+    }
     if(f.id==='f-cuenta'){
       const {data,error}=await sb().from('perfiles').update({nombre:v('cu-nombre'),telefono:v('cu-tel')||null}).eq('user_id',J.u.id).select().single();
       if(error){toast(errJug(error));return}
@@ -223,5 +266,9 @@ document.addEventListener('submit',async e=>{
   finally{if(btn.isConnected)btn.disabled=false}
 },true);
 
+document.addEventListener('visibilitychange',async()=>{
+  if(document.visibilityState!=='visible'||!J.visible||!J.u||document.querySelector('#modal .sheet'))return;
+  const antes=JSON.stringify(J.conex);await cargarConexiones();if(JSON.stringify(J.conex)!==antes)mostrarJugador();
+});
 window.TAJ={antesDeCargar};
 })();

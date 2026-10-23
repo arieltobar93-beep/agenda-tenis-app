@@ -317,6 +317,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 
 /* ---------- almacenamiento ---------- */
 async function save(col,obj){
+  if(window.TAP&&window.TAP.frena(col,obj))throw new Error('limite'); // planes.js: límite de alumnos del plan
   if(mode==='db'){
     try{await db.collection(col).doc(obj.id).set(obj)}catch(e){toast(e.code==='quota_exceeded'?'Se llenó el espacio: borra clases antiguas':'No se pudo guardar, intenta de nuevo');throw e}
   }else{
@@ -324,6 +325,7 @@ async function save(col,obj){
   }
 }
 async function removeDoc(col,id){
+  if(window.TAP&&window.TAP.frenaBorrar(col,id))throw new Error('limite');
   if(mode==='db'){try{await db.collection(col).doc(id).delete()}catch(e){toast('No se pudo borrar');throw e}}
   else{S[col]=S[col].filter(x=>x.id!==id);persistLocal();render()}
 }
@@ -371,13 +373,21 @@ async function init(){
 // (tenis-cloud-<usuario>) y una marca de "cambios por subir" (tenis-dirty-<usuario>) para reintentar sin señal.
 const SB_JS='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
 const DEMO_IDS=new Set(['a1','a2','a3','c1','c2','c3','c4','c5','p1','k1','k2','g1']);
-const SYNC_TXT={ok:'Guardado en la nube',saving:'Guardando…',offline:'Sin conexión · guardado en el teléfono'};
+const SYNC_TXT={ok:'Guardado en la nube',saving:'Guardando…',offline:'Sin conexión · guardado en el teléfono',limite:'Sin guardar · superaste tu plan'};
 let sub={activo:true,tipo:'',dias:0};
 const syncTxt=st=>SYNC_TXT[st]+(sub.activo&&sub.tipo==='prueba'?' · Prueba: '+sub.dias+(sub.dias==1?' día':' días'):'');
 async function checkSub(u){
   const key='tenis-sub-'+u.id;
-  try{const{data,error}=await sb.rpc('estado_suscripcion',{p_app:'tenis'});if(error||!data)throw error||new Error('sub');sub=data;store.set(key,JSON.stringify({fin:data.fin,tipo:data.tipo}))}
-  catch(_){const c=readJSON(key);if(c&&c.fin){const ms=new Date(c.fin)-Date.now();sub={activo:ms>0,tipo:c.tipo,dias:Math.max(0,Math.ceil(ms/864e5))}}}
+  try{const{data,error}=await sb.rpc('estado_suscripcion',{p_app:'tenis'});if(error||!data)throw error||new Error('sub');sub=data;store.set(key,JSON.stringify(data))}
+  catch(_){const c=readJSON(key);if(c)sub=subOffline(c)}
+}
+// Sin señal: se usa la última respuesta guardada. Si la prueba o el plan vencieron, se asume el plan Gratis.
+function subOffline(c){
+  if(!c.fin)return c.plan?c:{activo:true,tipo:c.tipo||'',dias:0};
+  const ms=new Date(c.fin)-Date.now(),dias=Math.max(0,Math.ceil(ms/864e5));
+  if(ms>0)return {...c,activo:true,dias};
+  if(!c.plan)return {activo:false,tipo:c.tipo,dias:0}; // copia de la versión anterior
+  return {...c,activo:true,tipo:'gratis',dias:0,fin:null,plan:'gratis',plan_nombre:'Gratis',max_alumnos:3,premium:false};
 }
 let sb=null,clientP=null,user=null,cloud=false,syncState='ok',needsLoad=false,shownFor=null;
 let pushT=null,retryT=null,loadT=null,retryMs=0,ver=0,pushing=null,pushAgain=false,mig=null;
@@ -509,7 +519,7 @@ function openOffline(){
   const last=readJSON('tenis-last-user');const data=last&&readJSON(kData(last.id));
   if(!last||!data)return false;
   user=last;cloud=true;mode='local';needsLoad=true;applyState(data);syncState='offline';
-  const c=readJSON('tenis-sub-'+last.id);if(c&&c.fin){const ms=new Date(c.fin)-Date.now();sub={activo:ms>0,tipo:c.tipo,dias:Math.max(0,Math.ceil(ms/864e5))};if(!sub.activo){showAuth('blocked');return true}}
+  const c=readJSON('tenis-sub-'+last.id);if(c){sub=subOffline(c);if(!sub.activo){showAuth('blocked');return true}}
   showApp();
   return true;
 }
@@ -571,6 +581,7 @@ function push(){
       retryMs=0;if(user&&user.id===id)setSync(v===ver?'ok':'saving');
     }catch(e){
       if(!user||user.id!==id)return;
+      if(window.TAP&&window.TAP.esLimite(e)){setSync('limite');window.TAP.alLimite();return} // el servidor rechazó por el plan: no reintentar
       setSync('offline');retryMs=Math.min(retryMs?retryMs*2:5000,60000);retryT=setTimeout(push,retryMs);
     }
   })().finally(()=>{pushing=null;if(pushAgain){pushAgain=false;if(isDirty())schedulePush()}});
@@ -785,15 +796,16 @@ function vFinanzas(){
 function vAlumnos(){
   if(!S.alumnos.length)return `<div class="empty"><strong>Aún no hay alumnos</strong>Agrega el nombre, el valor por clase y si paga a fin de mes o por adelantado.<button class="btn primary" data-act="new-alumno">+ Agregar alumno</button></div>`;
   const m=today().slice(0,7);const rs=Object.fromEntries(resumenMes(m).map(r=>[r.a.id,r]));
-  let h=`<input id="al-q" class="search" type="search" placeholder="Buscar alumno…" autocomplete="off" value="${esc(ui.alQ||'')}" aria-label="Buscar alumno"><div class="list">`;
-  for(const a of [...S.alumnos].sort((x,y)=>x.nombre.localeCompare(y.nombre))){
+  const arch=S.alumnos.filter(a=>a.archivado);
+  let h=(window.TAP?window.TAP.usoHtml():'')+`<input id="al-q" class="search" type="search" placeholder="Buscar alumno…" autocomplete="off" value="${esc(ui.alQ||'')}" aria-label="Buscar alumno"><div class="list">`;
+  for(const a of [...S.alumnos].filter(a=>!a.archivado||ui.verArch).sort((x,y)=>(!!x.archivado-!!y.archivado)||x.nombre.localeCompare(y.nombre))){
     const r=rs[a.id];const ini=a.nombre.replace(/^Ejemplo:\s*/,'').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
     const dn=norm(a.nombre+' '+(a.titular||''));
     h+=`<div class="row" data-n="${esc(dn)}" ${ui.alQ&&!dn.includes(norm(ui.alQ).trim())?'hidden':''}><button class="student" data-act="open-perfil" data-id="${esc(a.id)}"><span class="avatar">${esc(ini)}</span>
-      <span class="s-main"><b>${esc(a.nombre)}</b><span>${clp(a.tarifa)} por hora · paga ${esc(a.pago||'fin de mes')}${a.telefono?' · '+esc(a.telefono):''}</span></span>
+      <span class="s-main"><b>${esc(a.nombre)}${a.archivado?' <span class="chip nada">Archivado</span>':''}</b><span>${clp(a.tarifa)} por hora · paga ${esc(a.pago||'fin de mes')}${a.telefono?' · '+esc(a.telefono):''}</span></span>
       <span class="price">${r?estadoPago(r):''}</span></button></div>`;
   }
-  return h+`</div>`;
+  return h+`</div>`+(arch.length?`<button class="btn small ghost" data-act="ver-arch" style="align-self:flex-start">${ui.verArch?'Ocultar':'Ver'} archivados (${arch.length})</button>`:'');
 }
 
 /* ---------- hojas (formularios) ---------- */
@@ -821,7 +833,7 @@ function renderPick(id,q){
   const nq=norm(q).trim();
   const mesIn=document.getElementById('p-mes');const m=mesIn&&mesIn.value?mesIn.value:ui.month;
   const deb=Object.fromEntries(resumenMes(m).map(r=>[r.a.id,r.saldo]));
-  const list=S.alumnos.filter(a=>!nq||norm(a.nombre+' '+(a.titular||'')).includes(nq))
+  const list=S.alumnos.filter(a=>!a.archivado&&(!nq||norm(a.nombre+' '+(a.titular||'')).includes(nq)))
     .sort((x,y)=>(deb[y.id]||0)-(deb[x.id]||0)||x.nombre.localeCompare(y.nombre));
   L.innerHTML=list.slice(0,8).map(a=>`<button type="button" data-act="pick" data-for="${id}" data-v="${esc(a.id)}"><b>${esc(a.nombre)}</b>${deb[a.id]>0?`<span>Debe ${clp(deb[a.id])}</span>`:''}</button>`).join('')||`<div class="pick-empty">No hay alumnos con ese nombre</div>`;
   L.hidden=false;
@@ -830,7 +842,7 @@ function renderPick(id,q){
 function sheetClase(c){
   const isNew=!c;
   c=c||{id:uid(),fecha:defaultFecha(),hora:'18:00',duracion:60,alumnoIds:[],estado:'agendada',nota:'',clubId:(club(ui.lastClub)?ui.lastClub:(S.clubes.length===1?S.clubes[0].id:''))};
-  const checks=S.alumnos.length?[...S.alumnos].sort((x,y)=>(c.alumnoIds.includes(y.id)-c.alumnoIds.includes(x.id))||x.nombre.localeCompare(y.nombre)).map(a=>`<label data-n="${esc(norm(a.nombre+' '+(a.titular||'')))}"><input type="checkbox" name="al" value="${esc(a.id)}" ${c.alumnoIds.includes(a.id)?'checked':''}>${esc(a.nombre)}</label>`).join(''):'<span class="muted">Primero agrega alumnos en la pestaña Alumnos.</span>';
+  const checks=S.alumnos.length?[...S.alumnos].filter(a=>!a.archivado||c.alumnoIds.includes(a.id)).sort((x,y)=>(c.alumnoIds.includes(y.id)-c.alumnoIds.includes(x.id))||x.nombre.localeCompare(y.nombre)).map(a=>`<label data-n="${esc(norm(a.nombre+' '+(a.titular||'')))}"><input type="checkbox" name="al" value="${esc(a.id)}" ${c.alumnoIds.includes(a.id)?'checked':''}>${esc(a.nombre)}</label>`).join(''):'<span class="muted">Primero agrega alumnos en la pestaña Alumnos.</span>';
   sheet(`<h2>${isNew?'Nueva clase':'Clase'}</h2>
   <form id="f-clase" data-id="${esc(c.id)}" data-new="${isNew}">
    <div style="display:flex;flex-direction:column;gap:14px">
@@ -865,6 +877,7 @@ function sheetAlumno(a){
    <div class="field"><label for="a-salud">Lesiones o cuidados</label><input id="a-salud" value="${esc(a.salud||'')}" placeholder="Ej. codo sensible, rodilla operada"></div>
    <div class="field"><label for="a-nota">Nota</label><textarea id="a-nota" rows="2" placeholder="Nivel, golpes que trabaja…">${esc(a.nota||'')}</textarea></div>
    ${!isNew&&waUrl(a.telefono,'x')?`<div><a class="btn small wa" href="${esc(waUrl(a.telefono,'Hola '+String(a.nombre).replace(/^Ejemplo:\s*/,'').split(' ')[0]+'! '))}" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>`:''}
+   ${isNew?'':`<div class="field"><span>${a.archivado?'Alumno archivado':'¿Dejó de venir?'}</span><button type="button" class="btn small" data-act="arch-alumno" data-id="${esc(a.id)}" style="align-self:flex-start">${a.archivado?'Reactivar alumno':'Archivar alumno'}</button><span class="muted" style="font-size:12.5px">${a.archivado?'Vuelve a contar en tu plan.':'No cuenta en tu plan y conserva su historial, clases y pagos. Puedes reactivarlo cuando quieras.'}</span></div>`}
    <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger${ui.armed===a.id?' armed':''}" data-act="del-alumno" data-id="${esc(a.id)}">${ui.armed===a.id?'Toca otra vez para borrar':'Borrar'}</button>`}
    <div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
   </div></form>`);
@@ -1054,6 +1067,7 @@ function sheetConfig(){
    <p class="muted" style="margin:0;font-size:13px">Así se buscan los avisos de tu banco. Si tu banco usa otro asunto, agrégalo aquí, por ejemplo <b>from:avisos@tubanco.cl</b>.</p>
    <div class="field"><label for="g-cierre">Hora para preguntarte si hiciste las clases</label><input id="g-cierre" type="time" value="${esc(c.cierre||'21:00')}"></div>
    <label class="check-row"><input type="checkbox" id="g-auto" ${c.autoRealizar?'checked':''}><span>Si no respondo, dar por realizadas las clases de días anteriores. Puedo corregirlas después.</span></label>
+   ${cloud&&user&&window.TAP?window.TAP.ajustesHtml():''}
    ${cloud&&user?`<div class="field"><span>Cuenta</span><div class="acct">${esc(user.email||'Sesión iniciada')}</div><span class="muted" style="font-size:12.5px">Tus datos se guardan en tu cuenta y quedan disponibles en todos tus dispositivos. También queda una copia en este teléfono para usar la app sin internet.</span><div class="row-actions"><button type="button" class="btn small danger" data-act="del-logout">Cerrar sesión</button></div></div>`:''}
    ${mode==='local'?`<div class="field"><span>${cloud?'Respaldo de tus datos':'Tus datos en este teléfono'}</span><div class="row-actions"><button type="button" class="btn small" data-act="backup">Descargar respaldo</button><label class="btn small" for="g-restore" style="cursor:pointer">Restaurar respaldo</label><input type="file" id="g-restore" accept="application/json,.json" hidden><button type="button" class="btn small danger" data-act="del-local">Empezar de cero</button></div><span class="muted" style="font-size:12.5px">${cloud?'Puedes descargar una copia de tus datos cuando quieras. Empezar de cero borra todo, también en tu cuenta.':'Los datos se guardan solo en este teléfono. Descarga un respaldo cada cierto tiempo.'}</span></div>`:''}
    <div class="sheet-actions"><div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
@@ -1127,6 +1141,9 @@ document.addEventListener('click',async e=>{
     case 'new-alumno':sheetAlumno();break;
     case 'edit-alumno':sheetAlumno(alumno(id));break;
     case 'open-perfil':ui.perfil=id;render();window.scrollTo(0,0);break;
+    case 'ver-arch':ui.verArch=!ui.verArch;render();break;
+    case 'arch-alumno':{const a=alumno(id);if(!a)break;const nuevo={...a,archivado:!a.archivado};
+      try{closeSheet();await save('alumnos',nuevo);toast(nuevo.archivado?'Alumno archivado':'Alumno reactivado')}catch(_){}break}
     case 'close-perfil':ui.perfil=null;render();window.scrollTo(0,0);break;
     case 'edit-clase':sheetClase(S.clases.find(c=>c.id===id));break;
     case 'new-pago':sheetPago(id);break;
@@ -1215,12 +1232,15 @@ document.addEventListener('submit',async e=>{
 });
 window.TA={S,ui,save,removeDoc,esc,uid,toast,sheet,closeSheet,render,alumno,today,parse,addDays,clp,dayName,
   sb:()=>sb,user:()=>user,isCloud:()=>!!(cloud&&user),sub:()=>sub,setSync,persist:persistLocal,
-  showAuth,continuar:u=>loadForUser(u)};
+  showAuth,continuar:u=>loadForUser(u),
+  refrescarPlan:async()=>{if(!user||!sb)return;await checkSub(user);render();if(isDirty())push()}};
 init();
 })();
 </script>
 <script src="perfil.js"></script>
 <script src="jugador.js"></script>
+<script src="planes.js"></script>
+<script src="conexion.js"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./',updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}))}</script>
 </body>
 </html>

@@ -183,6 +183,8 @@ function vPerfil(id){
     h+=`<div class="box hist"><span class="muted" style="font-size:12.5px">Historial (toca para editar)</span>${[...E].reverse().map(e=>`<button data-xact="eval-edit" data-id="${esc(e.id)}"><span>${esc(fmtF(e.fecha))}</span><span class="muted">${SKILLS.map(([k,n])=>e[k]?n[0]+e[k]:'').filter(Boolean).join(' · ')}</span></button>`).join('')}</div>`;
   }
   h+=`</section>`;
+  // conexión con la app del jugador (conexion.js)
+  if(window.TAC)h+=window.TAC.seccion(id);
   // videos
   const usados=V.reduce((s,v)=>s+(v.size||0),0);
   h+=`<section class="xp"><div class="sec-h"><h3>Videos</h3><div class="row2"><button class="btn small primary" data-xact="rec" data-id="${esc(id)}">● Grabar</button><button class="btn small" data-xact="upl" data-id="${esc(id)}">Subir</button></div></div>`;
@@ -310,7 +312,7 @@ async function transcode(file,onProg){
 async function saveVideo(m){
   const u=A.user(),s=sb();
   if(!u||!s){toast('Inicia sesión para guardar videos');return false}
-  if(!A.sub().activo){toast('Tu prueba terminó: activa tu cuenta para guardar videos');return false}
+  if(A.sub().premium===false){window.TAP?window.TAP.sheetPlanes('premium'):toast('Los videos están en los planes pagados');return false}
 if((A.S.videos||[]).filter(v=>v.fecha===A.today()).length>=MAX_DIA){toast('Llegaste al máximo de '+MAX_DIA+' videos por día. Mañana puedes subir más.');return false}
   if(m.blob.size>MAX_SUBIDA){toast('El video pesa demasiado ('+mb(m.blob.size)+'). Graba un clip más corto.');return false}
   const id=uid(),ext=extOf(m.mime),path=`${u.id}/${m.alumnoId}/${id}.${ext}`;
@@ -402,7 +404,7 @@ function pickFile(alumnoId){
 /* ---------- grabar con guía ---------- */
 function openRecorder(alumnoId,golpe0){
   if(!A.isCloud()){toast('Inicia sesión para guardar videos');return}
-  if(!A.sub().activo){toast('Tu prueba terminó: activa tu cuenta para guardar videos');return}
+  if(A.sub().premium===false){window.TAP?window.TAP.sheetPlanes('premium'):toast('Los videos están en los planes pagados');return}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){toast('Aquí no se puede grabar. Usa "Subir" para elegir un video de tu galería.');return}
   const ov=mkOv('xrec-wrap');const al=A.alumno(alumnoId)||{};
   const S0={golpe:golpe0||'saque',face:'environment',countdown:true,stream:null,mr:null,chunks:[],t0:0,tick:null,orient:null,fps:30,mime:''};
@@ -645,7 +647,7 @@ for(const x of ts){if(x.t-pt<.06)continue;pt=x.t;fr.push(await mk(x.t,x.w))}
 fr.auto=auto;fr.ti=ti;return fr;
 }
 async function analizar(recs,onSaved){
-  if(!A.sub().activo){toast('Tu prueba terminó: activa tu cuenta para usar la IA');return}
+  if(A.sub().premium===false){window.TAP?window.TAP.sheetPlanes('premium'):toast('La IA está en los planes pagados');return}
   if(!sb()){toast('Inicia sesión para usar la IA');return}
   const w=wait('Analizando con IA…');
   try{
