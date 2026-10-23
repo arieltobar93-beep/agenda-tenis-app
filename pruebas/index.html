@@ -148,6 +148,11 @@ main .wrap{padding-block:16px 96px;display:flex;flex-direction:column;gap:16px}
 .field input,.field select,.field textarea{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 11px;width:100%;min-width:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .checks{display:flex;flex-wrap:wrap;gap:6px}
+.tipo-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tipo-seg button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;background:var(--surface);color:var(--ink);font:inherit;cursor:pointer}
+.tipo-seg button b{font-size:15px}.tipo-seg button span{font-size:12px;color:var(--muted)}
+.tipo-seg button[aria-pressed="true"]{border-color:var(--court);box-shadow:inset 0 0 0 1px var(--court);background:var(--info-bg)}
+.al-cuenta{font-size:12.5px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0}
 .checks label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:14px;cursor:pointer}
 .checks input{accent-color:var(--court)}
 .checks label:has(input:checked){background:var(--court);border-color:var(--court);color:var(--chalk)}
@@ -846,13 +851,17 @@ function sheetClase(c){
   sheet(`<h2>${isNew?'Nueva clase':'Clase'}</h2>
   <form id="f-clase" data-id="${esc(c.id)}" data-new="${isNew}">
    <div style="display:flex;flex-direction:column;gap:14px">
+    ${(()=>{const g=c.alumnoIds.length>1;return `<div class="field"><span>Tipo de clase</span><div class="tipo-seg" role="radiogroup" aria-label="Tipo de clase">
+      <button type="button" data-act="c-tipo" data-v="individual" aria-pressed="${!g}"><b>👤 Individual</b><span>Un alumno</span></button>
+      <button type="button" data-act="c-tipo" data-v="grupal" aria-pressed="${g}"><b>👥 Grupal</b><span>Varios alumnos a la vez</span></button></div>
+      <input type="hidden" id="c-tipo" value="${g?'grupal':'individual'}"></div>`})()}
     <div class="grid2"><div class="field"><label for="c-fecha">Fecha</label><input id="c-fecha" type="date" value="${c.fecha}" required></div>
     <div class="field"><label for="c-hora">Hora</label><input id="c-hora" type="time" value="${c.hora}" step="900" required></div></div>
     <div class="grid2"><div class="field"><label for="c-dur">Duración</label><select id="c-dur">${[60,90,120].map(n=>`<option value="${n}" ${c.duracion==n?'selected':''}>${n} min</option>`).join('')}</select></div>
     ${isNew?`<div class="field"><label for="c-rep">Repetir</label><select id="c-rep"><option value="1">Solo esta vez</option><option value="4">Semanal, 4 semanas</option><option value="8">Semanal, 8 semanas</option><option value="12">Semanal, 12 semanas</option></select></div>`:`<div class="field"><label for="c-nota">Nota</label><input id="c-nota" value="${esc(c.nota||'')}" placeholder="Cancha 2, revés…"></div>`}</div>
     ${isNew?`<div class="field"><label for="c-nota">Nota</label><input id="c-nota" value="" placeholder="Cancha 2, trabajar revés…"></div>`:''}
     ${S.clubes.length?`<div class="field"><label for="c-club">Club / cancha</label><select id="c-club"><option value="">Sin club</option>${S.clubes.map(k=>`<option value="${esc(k.id)}" ${c.clubId===k.id?'selected':''}>${esc(k.nombre)} · ${clp(k.costoHora)}/h</option>`).join('')}</select></div>`:`<input type="hidden" id="c-club" value="">`}
-    <div class="field"><span>Alumnos</span>${S.alumnos.length>=5?`<input id="c-q" type="search" placeholder="Buscar alumno…" autocomplete="off" aria-label="Buscar alumno">`:''}<div class="checks">${checks}</div></div>
+    <div class="field"><span id="c-al-lbl">${c.alumnoIds.length>1?'Alumnos':'Alumno'} <span class="al-cuenta" id="c-al-n"></span></span>${S.alumnos.length>=5?`<input id="c-q" type="search" placeholder="Buscar alumno…" autocomplete="off" aria-label="Buscar alumno">`:''}<div class="checks">${checks}</div></div>
     ${isNew?'':confirmWA(c)}
     ${isNew||!window.TAT?'':window.TAT.claseHtml(c)}
     ${isNew?'':`<div class="field"><span>Estado</span><div class="states">${Object.entries(ESTADOS).map(([k,v])=>`<button type="button" data-act="set-estado" data-v="${k}" aria-pressed="${c.estado===k}"><b>${v.t}</b><span>${v.d}</span></button>`).join('')}</div></div>`}
@@ -860,6 +869,7 @@ function sheetClase(c){
     <div class="sheet-actions">${isNew?'':`<button type="button" class="btn danger${ui.armed===c.id?' armed':''}" data-act="del-clase" data-id="${esc(c.id)}">${ui.armed===c.id?'Toca otra vez para borrar':'Borrar'}</button>`}
      <div class="end"><button type="button" class="btn ghost" data-act="close">Cerrar</button><button class="btn primary" type="submit">Guardar</button></div></div>
    </div></form>`);
+  cuentaAl();
 }
 function sheetAlumno(a){
   const isNew=!a;a=a||{id:uid(),nombre:'',telefono:'',tarifa:'',pago:'fin de mes',nota:'',link:''};
@@ -1149,6 +1159,9 @@ document.addEventListener('click',async e=>{
     case 'close-perfil':ui.perfil=null;render();window.scrollTo(0,0);break;
     case 'edit-clase':sheetClase(S.clases.find(c=>c.id===id));break;
     case 'new-pago':sheetPago(id);break;
+    case 'c-tipo':{const v=b.dataset.v;document.getElementById('c-tipo').value=v;document.querySelectorAll('.tipo-seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+      if(v==='individual'){const ch=[...document.querySelectorAll('#f-clase input[name="al"]:checked')];if(ch.length>1){ch.slice(1).forEach(x=>x.checked=false);toast('Quedó solo '+ch[0].parentElement.textContent.trim())}}
+      cuentaAl();break}
     case 'set-estado':document.getElementById('c-estado').value=b.dataset.v;document.querySelectorAll('.states button').forEach(x=>x.setAttribute('aria-pressed',x===b));break;
     case 'mark-all':{const ps=S.clases.filter(c=>c.estado==='agendada'&&c.fecha<today());for(const c of ps){await save('clases',{...c,estado:'realizada'})}toast(ps.length+' marcadas como realizadas');break}
     case 'copy':{const t=resumenTexto(id);try{await navigator.clipboard.writeText(t);toast('Resumen copiado, pégalo en WhatsApp')}catch(_){sheet(`<h2>Resumen</h2><textarea id="copy-txt" rows="9" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg)">${esc(t)}</textarea><div class="sheet-actions"><span class="muted" style="font-size:13px">Mantén presionado para copiar</span><div class="end"><button class="btn primary" data-act="close">Listo</button></div></div>`);const ta=document.getElementById('copy-txt');ta.focus();ta.select()}break}
@@ -1166,7 +1179,14 @@ document.addEventListener('click',async e=>{
   }
 });
 document.getElementById('fab').addEventListener('click',()=>{ui.armed=null;ui.tab==='alumnos'?sheetAlumno():ui.tab==='cobros'?sheetPago(ui.open):ui.tab==='finanzas'?sheetGasto(ui.openClub?'club':'otro',ui.openClub):sheetClase()});
+function cuentaAl(){const f=document.getElementById('f-clase');if(!f)return;const g=(document.getElementById('c-tipo')||{}).value==='grupal';
+  const n=f.querySelectorAll('input[name="al"]:checked').length;const l=document.getElementById('c-al-lbl');
+  if(l)l.firstChild.textContent=g?'Alumnos ':'Alumno ';const c=document.getElementById('c-al-n');if(c)c.textContent=g?(n?`· ${n} ${n===1?'elegido':'elegidos'}`:'· elige todos los que vengan'):''}
 document.addEventListener('change',e=>{
+  if(e.target.name==='al'&&e.target.closest('#f-clase')){
+    if((document.getElementById('c-tipo')||{}).value==='individual'&&e.target.checked)document.querySelectorAll('#f-clase input[name="al"]').forEach(x=>{if(x!==e.target)x.checked=false});
+    cuentaAl();
+  }
   if(e.target.id==='g-restore'&&e.target.files&&e.target.files[0]){const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||d.app!=='agenda-tenis')throw 0;for(const k of Object.keys(S))S[k]=Array.isArray(d[k])?d[k]:[];persistLocal();closeSheet();render();toast('Respaldo restaurado')}catch(_){toast('Ese archivo no es un respaldo de la agenda')}};r.readAsText(e.target.files[0])}
   if(e.target.dataset&&e.target.dataset.txi!==undefined&&ui.tx&&ui.tx.items){const it=ui.tx.items[+e.target.dataset.txi];if(it)it[e.target.dataset.k]=e.target.value}
   if(e.target.id==='x-tipo'){const t=e.target.value;document.getElementById('x-club-f').hidden=t!=='club';document.getElementById('x-con-f').hidden=t!=='otro';document.querySelector('.sheet h2').textContent=t==='club'?'Pago a club':'Nuevo gasto'}});
@@ -1198,6 +1218,7 @@ document.addEventListener('submit',async e=>{
   if(f.id==='f-clase'){
     const ids=[...f.querySelectorAll('input[name="al"]:checked')].map(x=>x.value);
     if(!ids.length){toast('Elige al menos un alumno');return}
+    if(v('c-tipo')==='grupal'&&ids.length<2){toast('Para una clase grupal elige al menos 2 alumnos');return}
     const base={fecha:v('c-fecha'),hora:v('c-hora'),duracion:+v('c-dur'),alumnoIds:ids,estado:v('c-estado'),nota:v('c-nota')||'',clubId:v('c-club')||''};
     ui.lastClub=base.clubId;
     if(f.dataset.new==='true'){
