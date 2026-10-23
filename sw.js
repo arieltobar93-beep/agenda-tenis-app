@@ -1,5 +1,5 @@
 // Setly: guarda la app en el teléfono para que abra rápido y sin señal.
-const CACHE='setly-v16';
+const CACHE='setly-v17';
 const SHELL=['./','index.html','config.js','perfil.js','ficha.js','test.js','ejercicios.js','videoteca.js','tareas.js','torneos.js','jugador.js','planes.js','conexion.js','manifest.webmanifest','icons/setly-logo.png','icons/splash.jpg','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
 const PREFIJO=CACHE.replace(/v\d+$/,''); // solo borra copias antiguas de esta misma versión de la app (la de pruebas tiene las suyas)

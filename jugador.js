@@ -90,6 +90,8 @@ const st=document.createElement('style');st.id='jstyle';st.textContent=`
 .mt .ev{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;font-size:14px}
 .mt .dots{display:flex;gap:5px}.mt .dots i{width:16px;height:16px;border-radius:50%;background:var(--line)}.mt .dots i.on{background:var(--court)}
 .mt .leg{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted)}.mt .leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.mt .prox .cal{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.auth .mt .prox .cal .btn{background:var(--surface);color:var(--ink);border-color:transparent;text-decoration:none}
 .nov{background:var(--info-bg);color:var(--court);border-radius:10px;padding:9px 12px;font-size:14px}
 .nov.cl{background:var(--surface);border:1px solid var(--ball);color:var(--ink)}
 .nuevo{display:inline-block;vertical-align:middle;background:var(--ball);color:var(--ball-ink);font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:99px;padding:1px 7px;margin-left:4px}
@@ -316,6 +318,22 @@ function evalsHtml(E,profe){
   }
   return h+`</div>`;
 }
+/* ---------- agregar clases al calendario ---------- */
+const p2=n=>String(n).padStart(2,'0');
+function fin(fecha,hora,dur){const [y,m,d]=fecha.split('-').map(Number),[h,mi]=String(hora||'18:00').split(':').map(Number);const t=new Date(y,m-1,d,h,mi+(+dur||60));return {f:`${t.getFullYear()}${p2(t.getMonth()+1)}${p2(t.getDate())}`,h:`${p2(t.getHours())}${p2(t.getMinutes())}00`}}
+function partes(x){const ini={f:x.fecha.replace(/-/g,''),h:String(x.hora||'18:00').replace(':','').padEnd(4,'0')+'00'};return {ini,fin:fin(x.fecha,x.hora,x.duracion)}}
+function gcalUrl(x,profe){const {ini,fin:fi}=partes(x);
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Clase de tenis'+(profe?' con '+profe:''))+
+    '&dates='+ini.f+'T'+ini.h+'/'+fi.f+'T'+fi.h+'&ctz=America/Santiago'+(x.club?'&location='+encodeURIComponent(x.club):'')+'&details='+encodeURIComponent('Agendada en Setly 🎾')}
+function icsDescargar(lista,profe){
+  const esc2=s=>String(s||'').replace(/[\\,;]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+  const ev=lista.map((x,i)=>{const {ini,fin:fi}=partes(x);return ['BEGIN:VEVENT','UID:setly-'+x.fecha+'-'+String(x.hora).replace(':','')+'-'+i+'@setly','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',
+    'DTSTART:'+ini.f+'T'+ini.h,'DTEND:'+fi.f+'T'+fi.h,'SUMMARY:'+esc2('Clase de tenis'+(profe?' con '+profe:'')),x.club?'LOCATION:'+esc2(x.club):'','DESCRIPTION:'+esc2('Agendada en Setly'),
+    'BEGIN:VALARM','TRIGGER:-PT2H','ACTION:DISPLAY','DESCRIPTION:Clase de tenis','END:VALARM','END:VEVENT'].filter(Boolean).join('\r\n')}).join('\r\n');
+  const txt=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Setly//ES','CALSCALE:GREGORIAN','METHOD:PUBLISH',ev,'END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/calendar'}));a.download=lista.length>1?'clases-tenis.ics':'clase-tenis.ics';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+}
 const TPR={derecha:['Derecha','de 10'],reves:['Revés','de 10'],saque:['Saque','de 10'],volea:['Volea','de 10'],peloteo:['Peloteo','golpes seguidos'],pies:['Desplazamiento','segundos']};
 function fechaLarga(f,h){try{const d=parse(f);const t=d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});const hoy=today(),man=A.addDays?A.addDays(hoy,1):'';
   const pre=f===hoy?'Hoy':f===man?'Mañana':t.charAt(0).toUpperCase()+t.slice(1);return pre+(h?' · '+h:'')}catch(_){return f+(h?' '+h:'')}}
@@ -340,7 +358,8 @@ async function mostrarMiTenis(jid){
     if(!d){h+=`<div class="note">Tu profe aún no tiene información para compartir.</div>`;continue}
     const P=d.proximas||[];
     h+=P.length?`<div class="card prox"><span class="jlbl">Próxima clase</span><strong>${esc(fechaLarga(P[0].fecha,P[0].hora))}</strong>${P[0].club?`<span>${esc(P[0].club)}</span>`:''}
-      ${P.length>1?`<span style="font-size:13px;opacity:.85">Después: ${P.slice(1,4).map(x=>esc(fechaLarga(x.fecha,x.hora))).join(' · ')}</span>`:''}</div>`
+      ${P.length>1?`<span style="font-size:13px;opacity:.85">Después: ${P.slice(1,4).map(x=>esc(fechaLarga(x.fecha,x.hora))).join(' · ')}</span>`:''}
+      <div class="cal"><a class="btn" href="${esc(gcalUrl(P[0],c.profe))}" target="_blank" rel="noopener">📅 Agregar a Google Calendar</a><button class="btn" data-act="mt-ics" data-id="${esc(c.id)}" data-v="1">iPhone u otro</button>${P.length>1?`<button class="btn" data-act="mt-ics" data-id="${esc(c.id)}" data-v="all">Agregar las ${P.length} próximas</button>`:''}</div></div>`
       :`<div class="card"><span class="jlbl">Próxima clase</span><span class="muted">No hay clases agendadas por ahora.</span></div>`;
     const f=d.ficha||{};
     if(f.foco&&f.foco.length)h+=`<div class="card foco"><span class="jlbl">Estamos trabajando</span><ol>${f.foco.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>`;
@@ -438,6 +457,8 @@ document.addEventListener('click',async e=>{
     case 'mt-ver':mostrarMiTenis(id);break;
     case 'mt-volver':J.mt=null;mostrarJugador();break;
     case 'mt-video':verVideo(id,b.dataset.v);break;
+    case 'mt-ics':{const c=(J.mtData||[]).find(x=>x.id===id);const P=c&&c.datos&&c.datos.proximas||[];if(!P.length)break;
+      icsDescargar(b.dataset.v==='all'?P:[P[0]],c.profe);toast(b.dataset.v==='all'?'Abre el archivo para agregar tus clases al calendario':'Abre el archivo para agregar la clase al calendario');break}
     case 'mt-clase':verClase(id,b.dataset.v);break;
     case 'mt-transf':{const c=(J.mtData||[]).find(x=>x.id===id);const t=c&&c.datos&&c.datos.cuenta&&c.datos.cuenta.transf;if(!t)break;
       sheet(`<h2>Datos de transferencia</h2><div class="box" style="white-space:pre-line">${esc(t)}</div><div class="sheet-actions"><div class="end"><button class="btn" data-act="mt-copiar" data-id="${esc(id)}">Copiar</button><button class="btn primary" data-act="close">Listo</button></div></div>`);break}
