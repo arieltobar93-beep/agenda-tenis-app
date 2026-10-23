@@ -80,6 +80,16 @@ const st=document.createElement('style');st.id='jstyle';st.textContent=`
 .mt details.kcat:first-of-type{border-top:0;padding-top:0}
 .mt details.kcat summary{cursor:pointer;padding:4px 0;list-style:revert}
 .mt details.kcat .vgal{margin-top:8px}
+.mt .cuenta .saldo{font-size:17px}.mt .cuenta .saldo.debe b{color:var(--bad)}.mt .cuenta .saldo.ok b{color:var(--ok)}
+.mt .hl{display:flex;flex-direction:column}
+.mt .hr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:13.5px}
+.mt .hr:first-child{border-top:0}
+.mt .he{font-size:12px;font-weight:700;border-radius:99px;padding:2px 9px;white-space:nowrap;background:var(--surface);border:1px solid var(--line)}
+.mt .he.ok{color:var(--ok);background:var(--ok-bg);border-color:transparent}.mt .he.warn{color:var(--warn);background:var(--warn-bg);border-color:transparent}.mt .he.muted{color:var(--muted)}
+.mt details.hist summary{cursor:pointer;font-size:13.5px;color:var(--court);font-weight:600;padding:4px 0}
+.mt .ev{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;font-size:14px}
+.mt .dots{display:flex;gap:5px}.mt .dots i{width:16px;height:16px;border-radius:50%;background:var(--line)}.mt .dots i.on{background:var(--court)}
+.mt .leg{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted)}.mt .leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
 .nov{background:var(--info-bg);color:var(--court);border-radius:10px;padding:9px 12px;font-size:14px}
 .nov.cl{background:var(--surface);border:1px solid var(--ball);color:var(--ink)}
 .nuevo{display:inline-block;vertical-align:middle;background:var(--ball);color:var(--ball-ink);font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:99px;padding:1px 7px;margin-left:4px}
@@ -276,6 +286,36 @@ async function verClase(cid,kid){
   const m=await firmar([v.path]);const el=document.getElementById('mtv-v'),msg=document.getElementById('mtv-m');if(!el)return;
   if(m[v.path]){el.src=m[v.path];if(msg)msg.remove()}else if(msg)msg.textContent='No se pudo cargar el video. Revisa tu conexión.';
 }
+const EST={realizada:['Realizada','ok'],cobrada:['Canceló tarde (se cobra)','warn'],cancelada:['Cancelada','muted'],lluvia:['Suspendida','muted']};
+const clp=n=>A.clp?A.clp(n):'$'+Math.round(n).toLocaleString('es-CL');
+const mesNom=m=>{try{const [y,mm]=m.split('-');const t=new Date(+y,+mm-1,1).toLocaleDateString('es-CL',{month:'long',year:'numeric'});return t.charAt(0).toUpperCase()+t.slice(1)}catch(_){return m}};
+function cuentaHtml(k,c){
+  const s=Math.round(k.saldo||0);
+  let h=`<div class="card cuenta"><span class="jlbl">Tu cuenta con ${esc(c.profe||'tu profe')}</span>
+   <div class="saldo ${s>0?'debe':'ok'}">${s>0?`Pendiente: <b>${clp(s)}</b>`:s<0?`Saldo a favor: <b>${clp(-s)}</b>`:'<b>Estás al día ✅</b>'}</div>`;
+  if((k.meses||[]).length)h+=`<div class="hl">${k.meses.map(m=>`<div class="hr"><span>${esc(mesNom(m.mes))}<br><small class="muted">${m.clases} ${m.clases===1?'clase':'clases'} · ${clp(m.monto)}${m.pagado?` · pagado ${clp(m.pagado)}`:''}</small></span><span class="he ${m.saldo>0?'warn':'ok'}">${m.saldo>0?'Debe '+clp(m.saldo):'Al día'}</span></div>`).join('')}</div>`;
+  if(s>0&&(k.link||k.transf))h+=`<div class="jfoot">${k.link?`<a class="btn primary" href="${esc(k.link)}" target="_blank" rel="noopener">Pagar</a>`:''}${k.transf?`<button class="btn" data-act="mt-transf" data-id="${esc(c.id)}">Datos de transferencia</button>`:''}</div>`;
+  return h+`<span class="muted" style="font-size:12px">Calculado con las clases que tu profe marcó como realizadas. Si ves algo raro, conversa con él.</span></div>`;
+}
+const SK=[['d','Derecha','#d95f02'],['r','Revés','#1b9e77'],['s','Saque','#7570b3'],['v','Volea','#e7298a'],['m','Movilidad','#66a61e']];
+function evalsHtml(E,profe){
+  const last=E[E.length-1],prev=E.length>1?E[E.length-2]:null;
+  let h=`<div class="card"><span class="jlbl">Evaluaciones de ${esc(profe||'tu profe')}</span><span class="muted" style="font-size:12.5px">Última: ${esc(fCorta(last.fecha))} · del 1 (por mejorar) al 5 (muy bien)</span><div class="ev">`;
+  for(const [k,n] of SK){if(last[k]==null)continue;const dif=prev&&prev[k]!=null?last[k]-prev[k]:0;
+    h+=`<span>${n}${dif>0?' <b style="color:var(--ok)">▲</b>':dif<0?' <b style="color:var(--bad)">▼</b>':''}</span><span class="dots">${[1,2,3,4,5].map(i=>`<i class="${i<=last[k]?'on':''}"></i>`).join('')}</span>`}
+  h+=`</div>${last.nota?`<div style="font-size:13.5px">"${esc(last.nota)}"</div>`:''}`;
+  if(E.length>1){
+    const W=320,H=150,L=22,R=10,T=10,B=22,n=E.length,x=i=>L+(n===1?(W-L-R)/2:(W-L-R)*i/(n-1)),y=v=>T+(H-T-B)*(5-v)/4;
+    let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Evolución de las evaluaciones">`;
+    for(let v=1;v<=5;v++)s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)">${v}</text>`;
+    for(const [k,,col] of SK){const pts=E.map((e,i)=>e[k]!=null?[x(i),y(e[k])]:null).filter(Boolean);if(!pts.length)continue;
+      if(pts.length>1)s+=`<polyline fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round" points="${pts.map(q=>q.join(',')).join(' ')}"/>`;
+      s+=pts.map(q=>`<circle cx="${q[0]}" cy="${q[1]}" r="3" fill="${col}"/>`).join('')}
+    s+=`<text x="${x(0)}" y="${H-6}" font-size="10" fill="var(--muted)">${esc(fCorta(E[0].fecha))}</text><text x="${x(n-1)}" y="${H-6}" font-size="10" fill="var(--muted)" text-anchor="end">${esc(fCorta(E[n-1].fecha))}</text></svg>`;
+    h+=s+`<div class="leg">${SK.map(([,n2,col])=>`<span><i style="background:${col}"></i>${n2}</span>`).join('')}</div>`;
+  }
+  return h+`</div>`;
+}
 const TPR={derecha:['Derecha','de 10'],reves:['Revés','de 10'],saque:['Saque','de 10'],volea:['Volea','de 10'],peloteo:['Peloteo','golpes seguidos'],pies:['Desplazamiento','segundos']};
 function fechaLarga(f,h){try{const d=parse(f);const t=d.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});const hoy=today(),man=A.addDays?A.addDays(hoy,1):'';
   const pre=f===hoy?'Hoy':f===man?'Mañana':t.charAt(0).toUpperCase()+t.slice(1);return pre+(h?' · '+h:'')}catch(_){return f+(h?' '+h:'')}}
@@ -335,7 +375,14 @@ async function mostrarMiTenis(jid){
     if(f.errores&&f.errores.length)h+=`<div class="card"><span class="jlbl">Lo que vamos a corregir</span><ul>${f.errores.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
     if(f.fisico)h+=`<div class="card"><span class="jlbl">Físico</span><div>${esc(f.fisico)}</div></div>`;
     if(f.mental)h+=`<div class="card"><span class="jlbl">Cabeza</span><div>${esc(f.mental)}</div></div>`;
-    h+=`<div class="card"><span class="jlbl">Clases</span><div><b>${d.realizadas||0}</b> clases realizadas${d.ultimas&&d.ultimas.length?` · última el ${esc(fCorta(d.ultimas[0]))}`:''}</div></div>`;
+    // Evaluaciones por golpe (1 a 5)
+    if(Array.isArray(d.evals)&&d.evals.length)h+=evalsHtml(d.evals,c.profe);
+    // Historial de clases
+    const HI=Array.isArray(d.historial)?d.historial:[];
+    h+=`<div class="card"><span class="jlbl">Clases</span><div><b>${d.realizadas||0}</b> clases realizadas${d.ultimas&&d.ultimas.length?` · última el ${esc(fCorta(d.ultimas[0]))}`:''}</div>
+      ${HI.length?`<details class="hist"><summary>Ver historial (${HI.length})</summary><div class="hl">${HI.map(x=>{const e=EST[x.estado]||[x.estado,''];return `<div class="hr"><span>${esc(fechaLarga(x.fecha,x.hora))}${x.club?`<br><small class="muted">${esc(x.club)}</small>`:''}</span><span class="he ${e[1]}">${esc(e[0])}</span></div>`}).join('')}</div></details>`:''}</div>`;
+    // Cuenta: lo que debe
+    if(d.cuenta)h+=cuentaHtml(d.cuenta,c);
   }
   // Torneos (del jugador, no del profe) y logros
   if(window.TAR){
@@ -392,6 +439,9 @@ document.addEventListener('click',async e=>{
     case 'mt-volver':J.mt=null;mostrarJugador();break;
     case 'mt-video':verVideo(id,b.dataset.v);break;
     case 'mt-clase':verClase(id,b.dataset.v);break;
+    case 'mt-transf':{const c=(J.mtData||[]).find(x=>x.id===id);const t=c&&c.datos&&c.datos.cuenta&&c.datos.cuenta.transf;if(!t)break;
+      sheet(`<h2>Datos de transferencia</h2><div class="box" style="white-space:pre-line">${esc(t)}</div><div class="sheet-actions"><div class="end"><button class="btn" data-act="mt-copiar" data-id="${esc(id)}">Copiar</button><button class="btn primary" data-act="close">Listo</button></div></div>`);break}
+    case 'mt-copiar':{const c=(J.mtData||[]).find(x=>x.id===id);const t=c&&c.datos&&c.datos.cuenta&&c.datos.cuenta.transf;try{await navigator.clipboard.writeText(t);toast('Datos copiados')}catch(_){toast('Mantén presionado el texto para copiarlo')}break}
     case 'mt-torneo':if(window.TAR)window.TAR.sheetTorneo({modo:'jugador',jugadorId:id});break;
     case 'mt-prac':{if(b.disabled)break;b.disabled=true;
       const {error}=await sb().rpc('marcar_practica',{p_conexion:id,p_tarea:b.dataset.t,p_hecho:b.dataset.v==='1'});

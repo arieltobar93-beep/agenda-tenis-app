@@ -1067,6 +1067,7 @@ function sheetConfig(){
    <div class="field"><label for="g-query">Búsqueda de transferencias en Gmail</label><textarea id="g-query" rows="3">${esc(c.gmailQuery||TX_Q)}</textarea></div>
    <p class="muted" style="margin:0;font-size:13px">Así se buscan los avisos de tu banco. Si tu banco usa otro asunto, agrégalo aquí, por ejemplo <b>from:avisos@tubanco.cl</b>.</p>
    <div class="field"><label for="g-cierre">Hora para preguntarte si hiciste las clases</label><input id="g-cierre" type="time" value="${esc(c.cierre||'21:00')}"></div>
+   <label class="check-row"><input type="checkbox" id="g-cuenta" ${c.cuentaAlumno===false?'':'checked'}><span>Mostrar a mis alumnos conectados sus clases y lo que deben (con mi link de pago y datos de transferencia).</span></label>
    <label class="check-row"><input type="checkbox" id="g-auto" ${c.autoRealizar?'checked':''}><span>Si no respondo, dar por realizadas las clases de días anteriores. Puedo corregirlas después.</span></label>
    ${cloud&&user&&window.TAP?window.TAP.ajustesHtml():''}
    ${cloud&&user?`<div class="field"><span>Cuenta</span><div class="acct">${esc(user.email||'Sesión iniciada')}</div><span class="muted" style="font-size:12.5px">Tus datos se guardan en tu cuenta y quedan disponibles en todos tus dispositivos. También queda una copia en este teléfono para usar la app sin internet.</span><div class="row-actions"><button type="button" class="btn small danger" data-act="del-logout">Cerrar sesión</button></div></div>`:''}
@@ -1220,7 +1221,7 @@ document.addEventListener('submit',async e=>{
     closeSheet();await save('gastos',g);ui.month=g.mes;render();toast(tipo==='club'?'Pago al club registrado':'Gasto registrado');
   }
   if(f.id==='f-config'){
-    const c={id:'perfil',nombre:v('g-nombre').trim(),link:v('g-link').trim(),transf:v('g-transf').trim(),gmailQuery:(v('g-query')||'').trim(),cierre:v('g-cierre')||'21:00',autoRealizar:!!(document.getElementById('g-auto')||{}).checked};
+    const c={id:'perfil',nombre:v('g-nombre').trim(),link:v('g-link').trim(),transf:v('g-transf').trim(),gmailQuery:(v('g-query')||'').trim(),cierre:v('g-cierre')||'21:00',autoRealizar:!!(document.getElementById('g-auto')||{}).checked,cuentaAlumno:!!(document.getElementById('g-cuenta')||{checked:true}).checked};
     autoDone=false;
     closeSheet();await save('config',c);toast('Ajustes guardados');
   }

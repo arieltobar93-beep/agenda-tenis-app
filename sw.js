@@ -1,11 +1,13 @@
 // Setly: guarda la app en el teléfono para que abra rápido y sin señal.
-const CACHE='setly-v14';
+const CACHE='setly-v15';
 const SHELL=['./','index.html','config.js','perfil.js','ficha.js','test.js','ejercicios.js','videoteca.js','tareas.js','torneos.js','jugador.js','planes.js','conexion.js','manifest.webmanifest','icons/setly-logo.png','icons/splash.jpg','icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+const PREFIJO=CACHE.replace(/v\d+$/,''); // solo borra copias antiguas de esta misma versión de la app (la de pruebas tiene las suyas)
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k.startsWith(PREFIJO)&&!(PREFIJO==='setly-'&&k.startsWith('setly-pruebas-'))).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
   const req=e.request; if(req.method!=='GET')return;
   const url=new URL(req.url);
+  if(url.origin===location.origin&&!new URL(self.registration.scope).pathname.includes('/pruebas/')&&url.pathname.includes('/pruebas/'))return; // la app de pruebas se maneja sola
   if(url.origin===location.origin){ // archivos propios: red primero, copia guardada sin señal
     e.respondWith(fetch(req).then(r=>{if(r.ok){const cp=r.clone();caches.open(CACHE).then(c=>c.put(req.mode==='navigate'?'index.html':req,cp))}return r})
       .catch(()=>caches.match(req.mode==='navigate'?'index.html':req,{ignoreSearch:true})));return;

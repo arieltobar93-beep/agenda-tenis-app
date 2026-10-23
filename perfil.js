@@ -187,6 +187,7 @@ function vPerfil(id){
     if(E.length>1)h+=`<div class="box">${chartSvg(E)}</div>`;
     h+=`<div class="box hist"><span class="muted" style="font-size:12.5px">Historial (toca para editar)</span>${[...E].reverse().map(e=>`<button data-xact="eval-edit" data-id="${esc(e.id)}"><span>${esc(fmtF(e.fecha))}</span><span class="muted">${SKILLS.map(([k,n])=>e[k]?n[0]+e[k]:'').filter(Boolean).join(' · ')}</span></button>`).join('')}</div>`;
   }
+  if(E.length)h+=`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)"><input type="checkbox" data-xvis="${esc(id)}" style="width:auto;margin:0" ${a.evalVis===false?'':'checked'}> Visible para el alumno (puntajes y comentarios)</label>`;
   h+=`</section>`;
   // conexión con la app del jugador (conexion.js)
   if(window.TAC)h+=window.TAC.seccion(id);
@@ -262,6 +263,11 @@ document.addEventListener('click',async e=>{
     case 'cmp-pick':sheetComparar(id);break;
     case 'cmp-go':{const f=document.getElementById('f-cmp');const x=f.querySelector('select[name=a]').value,y=f.querySelector('select[name=b]').value;if(x===y){toast('Elige dos videos distintos');return}A.closeSheet();openViewer([x,y]);break}
   }
+});
+document.addEventListener('change',async e=>{
+  const b=e.target.closest('input[data-xvis]');if(!b)return;
+  const a=A.alumno(b.dataset.xvis);if(!a)return;
+  try{await A.save('alumnos',{...a,evalVis:b.checked});toast(b.checked?'El alumno verá sus evaluaciones':'Evaluaciones ocultas para el alumno')}catch(_){}
 });
 document.addEventListener('submit',async e=>{
   const f=e.target;
